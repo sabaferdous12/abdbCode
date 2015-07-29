@@ -13,18 +13,14 @@ args=("$@")
 cat << __EOF__
 <div class='abdb_stats2'>
 <h2>Database Statistics - Unprocessed Data</h2>
-<p>The following statistics show the type and number of antibody structures that are not present in AbDb at the moment</p>
+<p>The following statistics show the type and number of unprocessed antibody related structures that are not present in AbDb</p>
 <table class="mytable">
 
 <tr>
-<th valign="middle">Light Only</th>
-<th valign="middle">Light-Antigen</th>
-<th valign="middle">Heavy Only</th>
-<th valign="middle">Heavy-Antigen</th>
 <th valign="middle">Fc Fragments</th>
 <th valign="middle">Numbering Failed</th>
+<th valign="middle">CDR Extraction Failed</th>
 <th valign="middle">Superseded</th>
-
 </tr>
 
 <tr>
@@ -32,9 +28,6 @@ cat << __EOF__
 <td valign="middle">${args[1]}</td>
 <td valign="middle">${args[2]}</td>
 <td valign="middle">${args[3]}</td>
-<td valign="middle">${args[4]}</td>
-<td valign="middle">${args[5]}</td>
-<td valign="middle">${args[6]}</td>
 </tr>
 
 </table>
@@ -42,7 +35,6 @@ cat << __EOF__
 </div>
 
 </table>
-
 </div>
 
 __EOF__
