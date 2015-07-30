@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -s
 #*************************************************************************
 #
 #   Program:    FreeComplexedAntibody
@@ -26,40 +26,83 @@ use strict;
 use warnings;
 
 my ($DIFF, $COMBINED, $OUT);
-open ($DIFF, '<', "difference.txt") or die "Can not open file $DIFF\n";
-open ($COMBINED, '<', "./Redundant_files/Redundant_Combined_Martin.txt")
-    or die "Can not open file $COMBINED\n";
-open ( $OUT, '>', "FreeComplexedAntibody.txt")
-  or die "Can not open file\n";
-print $OUT "Free Antibody:Complex\n";
 
-my (@free_antibody, @complex);
-my @combined = <$COMBINED>;
+my $differenceFile = $ARGV[0];
+my $redundantCombinedFile = $ARGV[1];
+my ($antigenDir, $haptenDir);
 
-while (my $line = <$DIFF>)
-{
-    chomp $line;
-    my ($records) = grep (m/$line/, @combined);
-    my @redundants = split (/,\s+/, $records);
+
+open ($DIFF, '<', $differenceFile) or
+    die "Can not open file $!\n";
+
+open ($COMBINED, '<', $redundantCombinedFile) or
+    die "Can not open file $COMBINED\n";
+my @combinedClus = <$COMBINED>;
+
+if ( defined ( $::a) ){
+    open ( $OUT, '>', "FreeAntibody_AntibodyAntigen.txt")
+        or die "Can not open file\n";
+    print $OUT "Free Antibody:Complexed Antibody\n";
+    $antigenDir = "AntibodyAntigen_Martin";
+    $haptenDir = "AntibodyHapten_Martin";
+    getFreeVsComplexedList ($DIFF, $OUT, $antigenDir, $haptenDir);    
     
-    foreach my $elem (@redundants)
-    {
-	chomp $elem;
-	my $elemPdb = $elem.".pdb";
-	if ( (-e "./Complex_Martin/$elemPdb") or
-	     (-e "./Hapten_Martin/$elemPdb") )
-	{
-	    push (@complex, $elem);
-	}
-	else
-	{
-	    push (@free_antibody, $elem);
-	}
-	next if ( (!@complex ) or (!@free_antibody) );
-    }
+}     
+if ( defined ( $::l) ){
+    open ( $OUT, '>', "Light_LightAntigen.txt")
+        or die "Can not open file\n";
+    print $OUT "Free Bence Jones (Light Chains):Complexed Bence Jones\n";
+    $antigenDir = "LightAntigen_Martin";
+    $haptenDir = "LightHapten_Martin";
+    getFreeVsComplexedList ($DIFF, $OUT, $antigenDir, $haptenDir);
+}
+if  ( defined ( $::h) ) {
+    open ( $OUT, '>', "Heavy_HeavyAntigen.txt")
+        or die "Can not open file\n";
+    print $OUT "Free Camelids (Heavy Chains):Complexed Camelids\n";
+    $antigenDir = "HeavyAntigen_Martin";
+    $haptenDir = "HeavyHapten_Martin";
+    getFreeVsComplexedList ($DIFF, $OUT, $antigenDir, $haptenDir);
+}
+             
+
+     
+sub getFreeVsComplexedList{
+    my ($DIFF, $OUT, $antigenDir, $haptenDir) = @_;
+    my (@free, @complex);
+    my $elemPdb;
     
-    print $OUT join(',', @free_antibody), ":", join(',', @complex), "\n";
-    @free_antibody = ();
-    @complex = ();
+    while (my $line = <$DIFF>)
+        {
+            chomp $line;
+            my ($records) = grep (m/$line/, @combinedClus);
+            my @redundants = split (/,\s+/, $records);
+            
+            foreach my $elem (@redundants)
+                {
+                    chomp $elem;
+                    $elemPdb = $elem.".pdb";
+                    
+                        if ( (-e "./$antigenDir/$elemPdb") or
+                                 (-e "./$haptenDir/$elemPdb")) 
+                            {
+                                push (@complex, $elem);
+                            }
+                    else
+                        {
+                            push (@free, $elem);
+                        }
+                }
+            # To skip any cluster without free antibody
+            if ( (!@complex ) or (!@free)) {
+                next;
+            }
+            else {
+                print $OUT join(',', @free), ":", join(',', @complex), "\n";
+            }
+            
+            @free = ();
+            @complex = ();
+        }
 }
 
