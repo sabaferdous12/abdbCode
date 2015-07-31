@@ -23,7 +23,7 @@
 #               
 #*************************************************************************
 use strict;
-use warnings;
+#use warnings;
 
 my ($DIFF, $COMBINED, $OUT);
 
@@ -33,15 +33,16 @@ my ($antigenDir, $haptenDir);
 
 
 open ($DIFF, '<', $differenceFile) or
-    die "Can not open file $!\n";
+    die "Can not open file for reading... $!\n";
 
 open ($COMBINED, '<', $redundantCombinedFile) or
     die "Can not open file $COMBINED\n";
 my @combinedClus = <$COMBINED>;
+my $dir = ".";
 
 if ( defined ( $::a) ){
-    open ( $OUT, '>', "FreeAntibody_AntibodyAntigen.txt")
-        or die "Can not open file\n";
+    open ( $OUT, '>', "$dir/FreeAntibody_AntibodyAntigen.list")
+        or die "Can not open file to write\n";
     print $OUT "Free Antibody:Complexed Antibody\n";
     $antigenDir = "AntibodyAntigen_Martin";
     $haptenDir = "AntibodyHapten_Martin";
@@ -49,16 +50,16 @@ if ( defined ( $::a) ){
     
 }     
 if ( defined ( $::l) ){
-    open ( $OUT, '>', "Light_LightAntigen.txt")
-        or die "Can not open file\n";
+    open ( $OUT, '>', "$dir/Light_LightAntigen.list")
+        or die "Can not open file to write\n";
     print $OUT "Free Bence Jones (Light Chains):Complexed Bence Jones\n";
     $antigenDir = "LightAntigen_Martin";
     $haptenDir = "LightHapten_Martin";
     getFreeVsComplexedList ($DIFF, $OUT, $antigenDir, $haptenDir);
 }
 if  ( defined ( $::h) ) {
-    open ( $OUT, '>', "Heavy_HeavyAntigen.txt")
-        or die "Can not open file\n";
+    open ( $OUT, '>', "$dir/Heavy_HeavyAntigen.list")
+        or die "Can not open file to write\n";
     print $OUT "Free Camelids (Heavy Chains):Complexed Camelids\n";
     $antigenDir = "HeavyAntigen_Martin";
     $haptenDir = "HeavyHapten_Martin";
