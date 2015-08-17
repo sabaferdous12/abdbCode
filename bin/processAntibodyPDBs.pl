@@ -840,7 +840,7 @@ my $count_LgHapten = $count_Lhapten+$count_LDNA_RNA;
 my $totalLG = $count_Lg+$count_LgAnt+$count_LgHapten;
 
 my $count_HvHapten = $count_Hhapten+$count_HDNA_RNA;
-my $totalHV = $count_Hv+$count_HvHapten;    
+my $totalHV = $count_Hv+$count_HvAnt+$count_HvHapten;    
 print {$MASTER_LOG} "AntibodyAntigen=$count_AbAg\n";
 print {$MASTER_LOG} "Free_Antibody=$count_FreeAntibody\n";
 print {$MASTER_LOG} "AB-Hapten=$count_AbHapten\n";
@@ -859,7 +859,7 @@ print {$MASTER_LOG} "CompleteHeavy_Dataset=$totalHV\n";
 print {$MASTER_LOG} "Fc=$count_Ant\n";
 print {$MASTER_LOG} "Failed=$count_kabatnum_error\n";
 print {$MASTER_LOG} "Superseded=$count_superseded\n";
-print {$MASTER_LOG} "CRD-Error=$count_CDR_error\n";
+print {$MASTER_LOG} "CDR-Error=$count_CDR_error\n";
 
 
 
