@@ -424,7 +424,7 @@ foreach my $pdb_id ( @all_pdbs )
             foreach my $mLOG ( $LOG, $MASTER_LOG ) {
                 print {$mLOG} "Can'nt extract CDRs for: $pdb_id\n" . $@ .
                     "Program exited\n\n";
-            }
+           }
             push ( @CDR_failed, $pdb_id );
             $count_CDR_error++;
             chdir '..';
