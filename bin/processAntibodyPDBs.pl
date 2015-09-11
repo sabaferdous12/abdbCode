@@ -99,7 +99,7 @@ use pdb qw(
     getsingleChainAntibody
       );
 
-use pdbWrap qw (
+use pdbWrap qw(
 dirOperations 
 processAntibody 
 processAntibodyAntigen 
@@ -217,8 +217,8 @@ my @all_pdbs = get_file_data ( $input_file ) or
 
 # ****** Global Variable Declaration ******
 my $dir;
-my ($count_superseded, $count_kabatnum_error, $count_CDR_error)
-    = (0, 0, 0);
+my ($count_superseded, $count_kabatnum_error, $count_CDR_error,
+    $count_idabError) = (0, 0, 0, 0);
 my ($count_FreeAntibody, $count_AbAg, $count_Abhapten, $count_AbDNA_RNA)
     = (0, 0, 0, 0);
 my ($count_Lg, $count_LgAnt, $count_Lhapten, $count_LDNA_RNA)
@@ -228,7 +228,7 @@ my ($count_Hv, $count_HvAnt, $count_Hhapten, $count_HDNA_RNA, $count_Ant)
 my (@Lg, @LgAnt, @LgHapten, @LgDRNA,
     @Hv, @HvAnt, @HvHapten, @HvDRNA,
     @FreeAntibody, @AbAg_complex, @AbAghapten, @AbAgDRNA, 
-    @superseded, @kabat_failed, @CDR_failed, %contact_hash, @Ant);
+    @superseded, @kabat_failed, @CDR_failed, %contact_hash, @Ant, @idab_failed);
 my ( $MASTER_LOG, $LOG, $SUMMARY );
 my $destABAG =  "$master_dir"."/".$AntibodyAntigen;
 my $destAB = "$master_dir"."/".$FreeAntibodies;
@@ -297,6 +297,16 @@ foreach my $pdb_id ( @all_pdbs )
     # are present in master log file
     
     ( $light_c, $heavy_c, $antigen_c ) = check_chain ( $file_path );
+
+    if ( ( !$light_c) and (!$heavy_c) and (!$antigen_c) )
+        {
+            push ( @idab_failed, $pdb_id );
+            $count_idabError++;
+            chdir '..';
+            next;
+        }
+
+     
     my $flag = 0;               # Flag if antigen is a Hapten molecule
 
     # This subroutine returns true if Hapten molecule
@@ -689,7 +699,7 @@ foreach my $pdb_id ( @all_pdbs )
     }                           # 2nd If-check ends here
     
     chdir '..';
-    #   last; 
+       last; 
 }   # Main For loop ends here
 #chdir '..';
 
@@ -713,6 +723,7 @@ print "$count_Ant proteins were found as Antigen chains (Fc Fragments)\n";
 print "$count_kabatnum_error proteins failed to number by program Kabatnum\n";
 print "$count_superseded proteins were found as Superseded\n";
 print "$count_CDR_error proteins were failed for CDR extraction\n";
+print "$count_idabError proteins were failed to identify by idabchain program\n";
 
 #######################
 
@@ -720,9 +731,9 @@ chdir '..';
 
 # open files for recording the PDB codes for processed and unprocessed Data 
 open (my $ABAGCOMPLEX, '>AbAg_complexes.list') or
-    die "Can not open file/n";
+    die "Can not open file\n";
 open (my $FREE_ANTIBODY, '>Antibody_complexes.list') or
-    die "Can not open file/n";
+    die "Can not open file\n";
 open (my $ABAG_HAPTEN, '>Antibody_Hapten.list') or
     die "Can not open file\n";
 open (my $ABAG_DRNA, '>Antibody_DRNA.list') or
@@ -730,34 +741,35 @@ open (my $ABAG_DRNA, '>Antibody_DRNA.list') or
 
 
 open (my $LG, '>Light_Only.list') or
-    die "Can not open file/n";
+    die "Can not open file\n";
 open (my $LG_AG, '>Light_Antigen_complexes.list') or
-    die "Can not open file/n";
+    die "Can not open file\n";
 open (my $LG_HAPTEN, '>Light_Hapten.list') or
-    die "Can not open file/n";
+    die "Can not open file\n";
 open (my $LG_DRNA, '>Light_DRNA.list') or
-    die "Can not open file/n";
+    die "Can not open file\n";
 
 
 open (my $HV, '>Heavy_Only.list') or
-    die "Can not open file/n";
+    die "Can not open file\n";
 open (my $HV_AG, '>Heavy_Antigen_complexes.list') or
-    die "Can not open file/n";
+    die "Can not open file\n";
 open (my $HV_HAPTEN, '>Heavy_Hapten.list') or
-    die"Can not open file/n";
+    die"Can not open file\n";
 open (my $HV_DRNA, '>Heavy_DRNA.list') or
-    die"Can not open file/n";
+    die"Can not open file\n";
 
 
 open (my $FC, '>FC_Fragments.list') or
-    die "Can not open file/n";
+    die "Can not open file\n";
 open (my $FAILED, '>Kabat_Failed.list') or
-    die "Can not open file/n";
+    die "Can not open file\n";
 open (my $SUPERSEDED, '>Superseded.list') or
-    die "Can not open file/n";
+    die "Can not open file\n";
 open (my $CDR_ERROR, '>CDR_Error.list') or
-    die "Can not open file/n";
-
+    die "Can not open file\n";
+open (my $IDAB_ERROR, '>IDAB_Error.list') or
+    die "Can not open file\n";
 
 print {$MASTER_LOG} ">$count_AbAg proteins has been successfully " . 
     "processed for antibody/antigen complexes\n";
@@ -833,6 +845,11 @@ print {$MASTER_LOG} ">$count_CDR_error proteins were failed for CDR extraction".
 print {$MASTER_LOG} "@CDR_failed\n";
 print {$CDR_ERROR} join ("\n", @CDR_failed), "\n";
 
+print {$MASTER_LOG} ">$count_idabError proteins were failed to identify by idabchain program".
+    "\n";
+print {$MASTER_LOG} "@idab_failed\n";
+print {$IDAB_ERROR} join ("\n", @idab_failed), "\n";
+
 my $count_AbHapten = $count_Abhapten+$count_AbDNA_RNA;
 my $totalAB = $count_AbAg+$count_FreeAntibody+$count_Abhapten+$count_AbDNA_RNA, "\n";
 
@@ -861,6 +878,7 @@ print {$MASTER_LOG} "Failed=$count_kabatnum_error\n";
 print {$MASTER_LOG} "Superseded=$count_superseded\n";
 print {$MASTER_LOG} "CDR-Error=$count_CDR_error\n";
 
+print {$MASTER_LOG} "IDAB-Error=$count_idabError\n";
 
 
 print "See masterlog.log for details...\n";
