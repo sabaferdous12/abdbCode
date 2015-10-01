@@ -21,6 +21,7 @@ cat << __EOF__
 <th valign="middle">Numbering Failed</th>
 <th valign="middle">CDR Extraction Failed</th>
 <th valign="middle">Superseded</th>
+<th valign="middle">Disordered Antigen</th>
 </tr>
 
 <tr>
@@ -28,6 +29,7 @@ cat << __EOF__
 <td valign="middle">${args[1]}</td>
 <td valign="middle">${args[2]}</td>
 <td valign="middle">${args[3]}</td>
+<td valign="middle">${args[4]}</td>
 </tr>
 
 </table>
