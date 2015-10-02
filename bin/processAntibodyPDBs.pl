@@ -681,6 +681,7 @@ foreach my $pdb_id ( @all_pdbs )
 	my $nonAg = processAntibodyAntigen ($antigen, $antigen_IDs, $hash_keysRef,
 				$LOG, $SUMMARY, $pdb_id, $destABAG, $destAB, $dir, $chainsHashRef,
                                 $file_path, $numbering);
+                
         if ( $nonAg) {
             push (@nonAg, $pdb_id );
             $countNonAg++;
@@ -706,7 +707,7 @@ foreach my $pdb_id ( @all_pdbs )
     }                           # 2nd If-check ends here
     
     chdir '..';
-       last; 
+#       last; 
 }   # Main For loop ends here
 #chdir '..';
 
