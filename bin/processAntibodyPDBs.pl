@@ -707,7 +707,7 @@ foreach my $pdb_id ( @all_pdbs )
     }                           # 2nd If-check ends here
     
     chdir '..';
-#       last; 
+       last; 
 }   # Main For loop ends here
 #chdir '..';
 
