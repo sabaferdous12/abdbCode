@@ -220,15 +220,15 @@ my $dir;
 my ($count_superseded, $count_kabatnum_error, $count_CDR_error,
     $count_idabError) = (0, 0, 0, 0);
 my ($count_FreeAntibody, $count_AbAg, $count_Abhapten, $count_AbDNA_RNA,
-    $countNonAg)
-    = (0, 0, 0, 0, 0);
+    $countNonAg, $countBiAg)
+    = (0, 0, 0, 0, 0, 0 );
 my ($count_Lg, $count_LgAnt, $count_Lhapten, $count_LDNA_RNA)
     = (0, 0, 0, 0);
 my ($count_Hv, $count_HvAnt, $count_Hhapten, $count_HDNA_RNA, $count_Ant)
     = (0, 0, 0, 0, 0); 
 my (@Lg, @LgAnt, @LgHapten, @LgDRNA,
     @Hv, @HvAnt, @HvHapten, @HvDRNA,
-    @FreeAntibody, @AbAg_complex, @AbAghapten, @AbAgDRNA, @nonAg, 
+    @FreeAntibody, @AbAg_complex, @AbAghapten, @AbAgDRNA, @nonAg, @biAg,
     @superseded, @kabat_failed, @CDR_failed, %contact_hash, @Ant, @idab_failed);
 my ( $MASTER_LOG, $LOG, $SUMMARY );
 my $destABAG =  "$master_dir"."/".$AntibodyAntigen;
@@ -678,7 +678,8 @@ foreach my $pdb_id ( @all_pdbs )
       
     
 	# Wrapper subroutine with several sub routines from pdbWrap
-	my $nonAg = processAntibodyAntigen ($antigen, $antigen_IDs, $hash_keysRef,
+        my ($nonAg, $biAntigen);
+        ($nonAg, $biAntigen) = processAntibodyAntigen ($antigen, $antigen_IDs, $hash_keysRef,
 				$LOG, $SUMMARY, $pdb_id, $destABAG, $destAB, $dir, $chainsHashRef,
                                 $file_path, $numbering);
                 
@@ -688,7 +689,13 @@ foreach my $pdb_id ( @all_pdbs )
             chdir '..';
             next;
              
-    }        
+        }
+
+        if ( $biAntigen ) {
+            push (@biAg, $pdb_id );
+            $countBiAg++;
+        }
+        
         # To deal with DNA/RNA antigens and move them in Hapten folder (Non-protein)
         if ( grep {/DNA|RNA/} @antigenChainType) {
             my $dest = "$master_dir"."/".$AntibodyHapten;
@@ -707,9 +714,10 @@ foreach my $pdb_id ( @all_pdbs )
     }                           # 2nd If-check ends here
     
     chdir '..';
-       last; 
+    #  last; 
 }   # Main For loop ends here
 #chdir '..';
+print "$countBiAg proteins were found bound with 2 antigens\n\n\n";
 
 print "$count_FreeAntibody proteins were found as only antibody complexes\n";
 print "$count_AbAg proteins has been successfully processed " .
@@ -741,6 +749,8 @@ chdir '..';
 
 # open files for recording the PDB codes for processed and unprocessed Data 
 open (my $NONAGCOMPLEX, '>NonAg_complexes.list') or
+    die "Can not open file\n";
+open (my $BIAGCOM, '>BiAntigens_complexes.list') or
     die "Can not open file\n";
 
 open (my $ABAGCOMPLEX, '>AbAg_complexes.list') or
@@ -794,6 +804,12 @@ print {$MASTER_LOG} ">$countNonAg proteins has been successfully " .
     "processed for non antigen complexes\n";
 print {$MASTER_LOG} "@nonAg\n";
 print {$NONAGCOMPLEX} join("\n", @nonAg);
+
+print {$MASTER_LOG} ">$countBiAg proteins has been successfully " .
+    "processed for bi-antigen complexes\n";
+print {$MASTER_LOG} "@biAg\n";
+print {$BIAGCOM} join("\n", @biAg);
+
 
 print {$MASTER_LOG} ">$count_FreeAntibody proteins were found as only antibody " .
     "complaxes\n";
@@ -878,7 +894,7 @@ my $totalLG = $count_Lg+$count_LgAnt+$count_LgHapten;
 
 my $count_HvHapten = $count_Hhapten+$count_HDNA_RNA;
 my $totalHV = $count_Hv+$count_HvAnt+$count_HvHapten;
-
+print {$MASTER_LOG} "Bi-Antigen=$countBiAg\n";
 print {$MASTER_LOG} "NonAntigen=$countNonAg\n";
 print {$MASTER_LOG} "AntibodyAntigen=$count_AbAg\n";
 print {$MASTER_LOG} "Free_Antibody=$count_FreeAntibody\n";
