@@ -27,9 +27,9 @@ sub processSingleChainAntibody
 {
     my ($pdbId, $pdbPath, $nsch, $ab, $dir, $masterDir, $LOG, $numbering) = @_;
 
-    my $destPro = "$masterDir"."/"."ProteinAntigens_".$ab."_".$numbering;
-    my $destNonPro = "$masterDir"."/"."NonProteinAntigens_".$ab."_".$numbering;
-    my $destFreeAb = "$masterDir"."/".$ab."Chains_".$numbering;
+    my $destPro = "$masterDir"."/".$ab."_Protein_".$numbering;
+    my $destNonPro = "$masterDir"."/".$ab."_NonProtein_".$numbering;
+    my $destFreeAb = "$masterDir"."/".$ab."_Free_".$numbering;
     my @singleChainAb;
     my $numberingError = 0;
     
@@ -47,10 +47,10 @@ sub processSingleChainAntibody
     print {$LOG} "The $pdbId PDB has been splitted in to different files".
         " based on number of chains\n";
 
-    if ( $ab eq "Light") {
+    if ( $ab eq "L") {
         @singleChainAb = @{$chainType{Light}};
     }
-    elsif ( $ab eq "Heavy") {
+    elsif ( $ab eq "H") {
         @singleChainAb = @{$chainType{Heavy}};
     }
 
@@ -96,7 +96,7 @@ sub processSingleChainAntibody
         $numberingError = processAntibodyAntigen($pdbId, $pdbPath, $ab, \@antigenIds,
                                \@singleChainAb, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
-                               $destNonPro, $destFreeAb);
+                               $destNonPro, $destFreeAb, $numbering);
         
     }
     # Antibody bound with antigen and haptens - Moved to protein antigen data
@@ -107,7 +107,7 @@ sub processSingleChainAntibody
         $numberingError = processAntibodyAntigen($pdbId, $pdbPath, $ab, \@antigenIds,
                                \@singleChainAb, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
-                               $destNonPro, $destFreeAb);
+                               $destNonPro, $destFreeAb, $numbering);
     }
     # Checks for free light and heavy chains
     else {
@@ -186,7 +186,7 @@ sub checkSingleChainRedundancy
     {
         for ( my $j = $i+1; $j<= $#allChains; $j++)
         {
-            if ( $ab eq "Light")
+            if ( $ab eq "L")
             {
                 if ( index ($chainIdChainTpye{$allChains[$i]}{"L"},
                      $chainIdChainTpye{$allChains[$j]}{"L"}) == -1)
