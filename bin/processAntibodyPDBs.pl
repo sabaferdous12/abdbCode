@@ -51,14 +51,14 @@ my $processDir = $masterDir.'/'.'Dataprep' . $$ ."_". $numbering; # $$ = process
 my $dir;
 
 my ($dataPrep, $proteinAntigensAB, $nonProteinAntigensAB, $freeAntibodiesAB)
-    = ("DataPrep", "ProteinAntigens_Antibody_".$numbering,
-       "NonProteinAntigens_Antibody_".$numbering, "FreeAntibodies_".$numbering);
+    = ("DataPrep", "LH_Protein_".$numbering,
+       "LH_NonProtein_".$numbering, "LH_Free_".$numbering);
 my ($proteinAntigensLG, $nonProteinAntigensLG, $freeAntibodiesLG)
-    = ("ProteinAntigens_Light_".$numbering,
-       "NonProteinAntigens_Light_".$numbering, "LightChains_".$numbering);
+    = ("L_Protein_".$numbering,
+       "L_NonProtein_".$numbering, "L_Free_".$numbering);
 my ($proteinAntigensHV, $nonProteinAntigensHV, $freeAntibodiesHV)
-    = ("ProteinAntigens_Heavy_".$numbering,
-       "NonProteinAntigens_Heavy_".$numbering, "HeavyChains_".$numbering);
+    = ("H_Protein_".$numbering,
+       "H_NonProtein_".$numbering, "H_Free_".$numbering);
 
 `mkdir -p $proteinAntigensAB $nonProteinAntigensAB $freeAntibodiesAB`;
 `mkdir -p $proteinAntigensLG $nonProteinAntigensLG $freeAntibodiesLG`;
@@ -109,7 +109,7 @@ foreach my $pdb ( @PDBCodes )
         
     if ( ( @light ) and (@heavy) )
         {
-            $ab = "LightHeavy";
+            $ab = "LH";
             $numberingError =
                 processAntibody ($pdb, $pdbPath, $nsch, $ab, $dir, $masterDir, $LOG, $numbering);
             if ( $numberingError)
@@ -122,7 +122,7 @@ foreach my $pdb ( @PDBCodes )
    ################# Just light
     elsif ( ( @light ) and ( !@heavy ) )
         {
-            $ab = "Light";
+            $ab = "L";
             $numberingError =
                 processSingleChainAntibody($pdb, $pdbPath, $nsch, $ab, $dir, $masterDir, $LOG, $numbering);
             if ( $numberingError)
@@ -135,7 +135,7 @@ foreach my $pdb ( @PDBCodes )
     ################# Just heavy
     elsif ( ( !@light ) and (@heavy ) )
         {
-            $ab = "Heavy";
+            $ab = "H";
             $numberingError =
                 processSingleChainAntibody($pdb, $pdbPath, $nsch, $ab, $dir, $masterDir, $LOG, $numbering);
             if ( $numberingError)
