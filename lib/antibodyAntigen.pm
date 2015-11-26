@@ -16,9 +16,9 @@ use antibodyProcessing qw (
 	largestValueInHash
 	extractCDRsAndFrameWorks
 	checkAntigenChains
-        mapAbAgChains
+        mapChainsIDs
         printHeader
-        mapAbChains);
+                      );
 use Exporter qw (import);
 our @EXPORT_OK = qw (
 	processAntibody
@@ -30,9 +30,9 @@ sub processAntibody
 {
     my ($pdbId, $pdbPath, $nsch, $ab, $dir, $masterDir, $LOG, $numbering) = @_;
 ########
-    my $destPro = "$masterDir"."/"."ProteinAntigens_Antibody_".$numbering;
-    my $destNonPro = "$masterDir"."/"."NonProteinAntigens_Antibody_".$numbering;
-    my $destFreeAb = "$masterDir"."/"."FreeAntibodies_".$numbering;
+    my $destPro = "$masterDir"."/".$ab."_Protein_".$numbering;
+    my $destNonPro = "$masterDir"."/".$ab."_NonProtein_".$numbering;
+    my $destFreeAb = "$masterDir"."/".$ab."_Free_".$numbering;
     my $numberingError = 0;  
     my ($chainType_HRef, $chainIdChainTpye_HRef) =
         getChainTypeWithChainIDs ($pdbPath);
@@ -108,7 +108,7 @@ sub processAntibody
             processAntibodyAntigen($pdbId, $pdbPath, $ab, $antigen_ARef,
                                \@antibodyPairs, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
-                               $destNonPro, $destFreeAb);
+                               $destNonPro, $destFreeAb, $numbering);
     }
     
     elsif ( ( @antigens) and ($hapten))
@@ -119,7 +119,7 @@ sub processAntibody
             processAntibodyAntigen($pdbId, $pdbPath, $ab, $antigen_ARef,
                                \@antibodyPairs, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
-                               $destNonPro, $destFreeAb);
+                               $destNonPro, $destFreeAb, $numbering);
     }
 
     # Checks for free antibodies and move then in Free antibodies data
@@ -152,7 +152,7 @@ sub makeFreeAntibodyComplex
         
         open (my $ABFILE, '>>',  "$dir/$newFile");
         
-        my %mapedChains = mapAbChains ($antibodyPair,$chainIdChainTpye_HRef );
+        my %mapedChains = mapChainsIDs ($antibodyPair,$chainIdChainTpye_HRef);
         printHeader($ABFILE, $numbering, $pdbPath, %mapedChains);
 
         open (my $AB, '<', "$dir/$lookForFile") or die "Can't open File\n";
@@ -174,7 +174,7 @@ sub processAntibodyAntigen
 {
     my ($pdbId, $pdbPath, $ab, $antigenIds_ARef, $antibodyPairs_ARef,
         $fileType, $dir, $masterDir, $LOG, $chainIdChainTpye_HRef,
-        $destPro, $destNonPro, $destFreeAb) = @_;
+        $destPro, $destNonPro, $destFreeAb, $numbering) = @_;
     my @antibodyPairs = @{$antibodyPairs_ARef};
 
     my $cdrError = 0;    
@@ -209,7 +209,7 @@ sub processAntibodyAntigen
                                                $dir, $masterDir, $LOG,
                                                $chainIdChainTpye_HRef,
                                                $destPro, $destNonPro, $destFreeAb,
-                                               %complexInfo);
+                                               $numbering, %complexInfo);
     return  $cdrError;
     
 }
@@ -219,15 +219,11 @@ sub makeAntibodyAntigenComplex
     {
     my ( $pdbId, $pdbPath,$fileType, $dir, $masterDir, $LOG,
          $chainIdChainTpye_HRef, $destPro, $destNonPro, $destFreeAb,
-         %complexInfo) = @_;
+         $numbering, %complexInfo) = @_;
     #my $dir = '.';
     my $count = 1;
     my $biAntigen = 0;
-    my $numbering = "Martin"; 
     my $chaintype = $SFPerlVars::chaintype;
-    # To obtain the antigen chain label and chain type (N Protein)
-    my (@antigenChainType) = `$chaintype $pdbPath`;
-        
     
     my @Freeantibodychains =
         grep {$complexInfo{$_} eq "NULL" } keys %complexInfo;
@@ -244,6 +240,8 @@ sub makeAntibodyAntigenComplex
     }
     
     my @antigen;
+    my @antigenChainType;
+    
     foreach my $ab_pair( keys %complexInfo )
     {
         my $numberedAntibody;
@@ -272,10 +270,18 @@ sub makeAntibodyAntigenComplex
             die "Can not write complex";
 
         # Print headers
-        my %mapedChains = mapAbAgChains ($ab_pair, %complexInfo );     
+        my %mapedChains = mapChainsIDs ($ab_pair,$chainIdChainTpye_HRef, %complexInfo );     
         printHeader($AG_AB_FILE, $numbering, $pdbPath, %mapedChains);
                 
         # In case of multiple antigens making contacts with antibody
+        
+        while (!eof ( $AB_FILE ) )
+        {
+            my $antibody = <$AB_FILE>;
+            next if ($antibody =~ /^MASTER|^END/);
+            print $AG_AB_FILE $antibody;
+        }
+        # In case of multiple antigens making contacts with antibody 
         foreach my $agChain(@antigen)
         {
             $agChain = $agChain.".pdb";
@@ -289,14 +295,10 @@ sub makeAntibodyAntigenComplex
                 next if ($antigen =~ /^MASTER|^END/);
                 print $AG_AB_FILE $antigen;
             }
+            # To obtain the antigen chain label and chain type (N Protein)
+            @antigenChainType = `$chaintype -c $agChain $pdbPath`;
         }
 
-        while (!eof ( $AB_FILE ) )
-        {
-            my $antibody = <$AB_FILE>;
-            next if ($antibody =~ /^MASTER|^END/);
-            print $AG_AB_FILE $antibody;
-        }
         
             if ( grep {/DNA|RNA/} @antigenChainType)
             {
@@ -356,10 +358,15 @@ sub getComplexInfoInHash
             {
                 $temp{$key} = $antigenChains{$key};
             }
+
         }
-
-        $complex{$ab_pair} = [keys %temp];
-
+        if ( !%temp ) {
+            $complex{$ab_pair} = "NULL";
+        }
+        else {
+            $complex{$ab_pair} = [keys %temp];
+        }
+        
     }
     print Dumper (\%complex);
     
