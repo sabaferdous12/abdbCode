@@ -27,9 +27,8 @@ our @EXPORT_OK = qw (
 			movePDBs
 			largestValueInHash
 			checkAntigenChains	
-                        mapAbAgChains
+                        mapChainsIDs
                         printHeader
-                        mapAbChains
                         getProcessedABchains
                 );
 # ************* getPDBPath *****************
@@ -302,7 +301,7 @@ sub extractCDRsAndFrameWorks
         
         my @numbering;
         
-        if ( $ab eq "LightHeavy")
+        if ( $ab eq "LH")
         {
             @numbering =  (["L24", "L34"], ["L50", "L56"], ["L89", "L97"],
                            ["H31", "H35"], ["H50", "H65"], ["H95", "H102"] );
@@ -315,7 +314,7 @@ $getpdb -v H50 H65 |
 $getpdb -v H95 H102 >>$FWsPDB`;
         }
         
-        elsif ( $ab eq "Light")
+        elsif ( $ab eq "L")
         {
             @numbering =  (["L24", "L34"], ["L50", "L56"], ["L89", "L97"]);
             `$getpdb -v L24 L34 $numberedAntibody |
@@ -323,7 +322,7 @@ $getpdb -v L50 L56 |
 $getpdb -v L89 L97 >>$FWsPDB`;
         }
         
-        elsif ( $ab eq "Heavy")
+        elsif ( $ab eq "H")
         {
             @numbering =  (["H31", "H35"], ["H50", "H65"], ["H95", "H102"] );
             `$getpdb -v H31 H35 $numberedAntibody | 
@@ -553,9 +552,9 @@ sub dirOperations
     return $dir;
 }
 
-sub mapAbChains
+sub mapChainsIDs
 {
-    my ($abPair, $chainIdChainTpye_HRef) = @_;
+    my ($abPair, $chainIdChainTpye_HRef, %complexInfo) = @_;
     my %mapedChains;
     my %chainIdChainTpye = %{$chainIdChainTpye_HRef};
     
@@ -565,7 +564,13 @@ sub mapAbChains
         ($L, $H) = split ("", $abPair);
         $mapedChains{'L'} = $L;
         $mapedChains{'H'} = $H;
-        $mapedChains{'A'} = [];
+        if ( !%complexInfo) {
+            $mapedChains{'A'} = [];
+        }
+        else {
+            $mapedChains{'A'} = $complexInfo{$abPair};
+        }
+        
     }
     else {
         my $chainLabel;
@@ -585,26 +590,15 @@ sub mapAbChains
             $mapedChains{'H'} = $abPair;
         }
         
-        $mapedChains{'A'} = [];
+        if ( $complexInfo{$abPair}) {
+            $mapedChains{'A'} = $complexInfo{$abPair};
+        }
+        else {
+            $mapedChains{'A'} = [];
+        }
+        
     }
     
-    return %mapedChains;
-}
-
-sub mapAbAgChains
-{
-    my ($abPair, %complexInfo) = @_;
-    my %mapedChains;
-
-    my ($L, $H);   
-    if ( exists $complexInfo{$abPair} ) {
-        ($L, $H) = split ("", $abPair);
-        
-        $mapedChains{'L'} = $L;
-        $mapedChains{'H'} = $H;
-        $mapedChains{'A'} = $complexInfo{$abPair};
-        
-    }
     return %mapedChains;
 }
     
@@ -612,6 +606,8 @@ sub printHeader
 {
     my ($INFILE, $numbering, $pdbPath, %mapedChains ) = @_;
     my %resInfo = getResolInfo($pdbPath);
+    print Dumper (\%mapedChains );
+    
     my $L = $mapedChains{L};
     my $H = $mapedChains{H};
     my $AgRef = $mapedChains{A};
@@ -679,6 +675,8 @@ sub headerLHchains
         }
     elsif ( ($L) and (!$H) and (@ag) )
         {
+            print "I AM LIGHT_ANTIGEN\n";
+            
             print $INFILE "REMARK 950 CHAIN L    L    $L\n";
             foreach my $Ag ( @ag ) {
                 print $INFILE "REMARK 950 CHAIN A    $Ag    $Ag\n";
@@ -693,14 +691,16 @@ sub headerLHchains
             
         }
 
-        elsif ( ($H) and (!$L) and (!@ag) )
+    elsif ( (!$L) and ($H) and (!@ag) )
         {
             print $INFILE "REMARK 950 CHAIN H    H    $H\n";
             print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
             print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
         }
-    elsif ( ($H) and (!$L) and (@ag) )
+    elsif ( (!$L) and ($H) and (@ag) )
         {
+            print "I AM HEAVY_PROTEIN\n";
+            
             print $INFILE "REMARK 950 CHAIN H    H    $H\n";
             foreach my $Ag ( @ag ) {
                 print $INFILE "REMARK 950 CHAIN A    $Ag    $Ag\n";
