@@ -348,58 +348,20 @@ sub getComplexInfoInHash
     foreach my $ab_pair (keys %antibodyAntigenContacts)
     {
         my %antigenChains = %{ $antibodyAntigenContacts{$ab_pair} };
-       # print Dumper (\%antigenChains);
+        %temp = ();      
         foreach my $key (keys %antigenChains)
         {
+            # Storing non zero antigen contacts keys (chain Ids)
             if ( $antigenChains{$key} > 0 )
             {
                 $temp{$key} = $antigenChains{$key};
             }
         }
+
         $complex{$ab_pair} = [keys %temp];
 
-=pod
-        # Get highest value from hash and corrrespoding key
-        my $Largest_v =  ((sort {$a <=> $b} values %antigenChains)[-1]);
-        my $Largest_k =
-            ((sort { $antigenChains{$b} <=> $antigenChains{$a} }
-                  keys %antigenChains)[0]);
-
-        # Get second highest value from hash and corrrespoding key
-        my $secLargest_v =  ((sort {$a <=> $b} values %antigenChains)[-2]);
-        my $secLargest_k =
-            ((sort { $antigenChains{$b} <=> $antigenChains{$a} }
-                  keys %antigenChains)[1]);
-
-        # To check if second highest value is non-zero
-        # Pairing antigen IDs with antibody
-        if ( $secLargest_v)
-        {
-        
-            if ( $secLargest_v > 0 )
-                {
-                    $complex{$ab_pair} = [$Largest_k, $secLargest_k];
-                }
-            else
-                {
-                    $complex{$ab_pair} ="NULL";
-                }
-        }
-        else {
-            if ( $Largest_v > 0)
-            {
-                $complex{$ab_pair} = [$Largest_k];
-            }
-            else {
-                $complex{$ab_pair} ="NULL";
-            }
-        }
-        
-=cut        
     }
-#    print Dumper (\%temp);
-    
- #   print Dumper (\%complex);
+    print Dumper (\%complex);
     
     return %complex;
 }
