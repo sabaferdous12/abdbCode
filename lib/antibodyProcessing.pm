@@ -615,152 +615,108 @@ sub printHeader
     my $L = $mapedChains{L};
     my $H = $mapedChains{H};
     my $AgRef = $mapedChains{A};
-
-    my @Ag = @{$AgRef};
-    my $size = scalar @Ag;
-    my ($Ag1, $Ag2);
     
-    if ( $size == 1) {
-        $Ag1 = $Ag[0];
-        $Ag2 = 0;
-    }
-    elsif ($size > 1) {
-        $Ag1 = $Ag[0];
-        $Ag2 = $Ag[1];
-    }
-    my ($sym, $Ag1ID, $Ag2ID);
-    if ( ($Ag1) or ($Ag2) ) {
-    
-        if ( ( $Ag1 eq "%l") or ($Ag1 eq "%h") )
-        {
-            ($sym, $Ag1ID) = split ("", $Ag1);
-            $Ag1 = uc ($Ag1ID);
-        }
-        if ( ( $Ag2 eq "%l") or ($Ag2 eq "%h"))
-        {
-            ($sym, $Ag2ID) = split ("", $Ag2);
-            $Ag2 = uc ($Ag2ID);
-        }
-    }
-    
-     if ( ( !$Ag1) and (!$Ag2) and ($L) and ($H) )
-        {
-	    
-            header($INFILE, $numbering, %resInfo);
-            print $INFILE "REMARK 950 CHAIN L    L    $L\n";
-            print $INFILE "REMARK 950 CHAIN H    H    $H\n";
-            print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
-        }
-    elsif ( ($L) and ($H) and ($Ag1) and (!$Ag2))
-        {
-            header($INFILE, $numbering, %resInfo);
-            print $INFILE "REMARK 950 CHAIN L    L    $L\n";
-            print $INFILE "REMARK 950 CHAIN H    H    $H\n";
-            print $INFILE "REMARK 950 CHAIN A    $Ag1    $Ag1\n";
+    my @ag = @{$AgRef};
 
-            print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $Ag1 -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $Ag1 -s $pdbPath`;
-        }
-
-    elsif ( ($L) and ($H) and ($Ag1) and ($Ag2))
-        {
-            if ( $Ag1ID )
-            {
-                header($INFILE, $numbering, %resInfo);
-                print $INFILE "REMARK 950 CHAIN L    L    $L\n";
-                print $INFILE "REMARK 950 CHAIN H    H    $H\n";
-                print $INFILE "REMARK 950 CHAIN A    $Ag1ID    $Ag1\n";
-                print $INFILE "REMARK 950 CHAIN A    $Ag2    $Ag2\n";
-                print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $Ag1 -m $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $Ag1 -s $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $Ag2 -m $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $Ag2 -s $pdbPath`;
-            }
-            if ( $Ag2ID)
-           {
-               header($INFILE, $numbering, %resInfo);
-               
-               print $INFILE "REMARK 950 CHAIN L    L    $L\n";
-               print $INFILE "REMARK 950 CHAIN H    H    $H\n";
-               print $INFILE "REMARK 950 CHAIN A    $Ag1    $Ag1\n";
-               print $INFILE "REMARK 950 CHAIN A    $Ag2ID    $Ag2\n";
-               print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
-               print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
-               print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
-               print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
-               print $INFILE "REMARK 950 ", `pdbheader -c $Ag1 -m $pdbPath`;
-               print $INFILE "REMARK 950 ", `pdbheader -c $Ag1 -s $pdbPath`;
-               print $INFILE "REMARK 950 ", `pdbheader -c $Ag2 -m $pdbPath`;
-               print $INFILE "REMARK 950 ", `pdbheader -c $Ag2 -s $pdbPath`;
-            }
-            else {
-                
-                header($INFILE, $numbering, %resInfo);
-                print $INFILE "REMARK 950 CHAIN L    L    $L\n";
-                print $INFILE "REMARK 950 CHAIN H    H    $H\n";
-                print $INFILE "REMARK 950 CHAIN A    $Ag1    $Ag1\n";
-                print $INFILE "REMARK 950 CHAIN A    $Ag2    $Ag2\n";
-                print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $Ag1 -m $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $Ag1 -s $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $Ag2 -m $pdbPath`;
-                print $INFILE "REMARK 950 ", `pdbheader -c $Ag2 -s $pdbPath`;
-
-            }
-        }
-
-    elsif ( ($L) and (!$Ag1) )
-        {
-            header($INFILE, $numbering, %resInfo);
-            print $INFILE "REMARK 950 CHAIN L    L    $L\n";
-            print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
-        }
-    elsif ( ($L) and ($Ag1) )
-        {
-            header($INFILE, $numbering, %resInfo);
-            print $INFILE "REMARK 950 CHAIN L    L    $L\n";
-            print $INFILE "REMARK 950 CHAIN A    $Ag1    $Ag1\n";
-            print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $Ag1 -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $Ag1 -s $pdbPath`;
-        }
-    elsif ( ($H) and (!$Ag1))
-        {
-            header($INFILE, $numbering, %resInfo);
-            print $INFILE "REMARK 950 CHAIN H    H    $H\n";
-            print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
-    }
- elsif ( ($H) and ($Ag1))
-        {
-            header($INFILE, $numbering, %resInfo);
-            print $INFILE "REMARK 950 CHAIN H    H    $H\n";
-            print $INFILE "REMARK 950 CHAIN A    $Ag1    $Ag1\n";
-            print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $Ag1 -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $Ag1 -s $pdbPath`;
-        }
-
+    headerBasic($INFILE, $numbering, %resInfo);    
+    headerLHchains ($INFILE, $pdbPath, $L, $H, \@ag);
 }
 
-sub header
+sub headerLHchains
+{
+    my ($INFILE, $pdbPath, $L, $H, $ag_ARef) = @_;
+    my @ag = @{$ag_ARef};
+    my ($sym, $AgID);
+    
+    if ( ($L) and ($H) and (!@ag ) ) 
+    {
+        print $INFILE "REMARK 950 CHAIN L    L    $L\n";
+        print $INFILE "REMARK 950 CHAIN H    H    $H\n";
+        print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
+        print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
+        print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
+        print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
+        
+    }
+    elsif ( ($L) and ($H) and ( @ag ) )
+    {
+        print $INFILE "REMARK 950 CHAIN L    L    $L\n";
+        print $INFILE "REMARK 950 CHAIN H    H    $H\n";
+        foreach my $Ag ( @ag ) {
+            if ( ( $Ag eq "%l") or ($Ag eq "%h") )
+            {
+                ($sym, $AgID) = split ("", $Ag);
+                $Ag = uc ($AgID);
+                print $INFILE "REMARK 950 CHAIN A    $AgID    $Ag\n";
+                
+            }
+            else {
+                print $INFILE "REMARK 950 CHAIN A    $Ag    $Ag\n";
+            }
+            
+        }
+        print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
+        print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
+        print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
+        print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
+
+        foreach my $Ag ( @ag ) {
+            if ( ( $Ag eq "%l") or ($Ag eq "%h") )
+            {
+                ($sym, $AgID) = split ("", $Ag);
+                $Ag = uc ($AgID);
+            }
+            print $INFILE "REMARK 950 ", `pdbheader -c $Ag -m $pdbPath`;
+            print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
+        }
+    }
+
+    elsif ( ($L) and (!$H) and (!@ag) )
+        {
+            print $INFILE "REMARK 950 CHAIN L    L    $L\n";
+            print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
+            print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
+        }
+    elsif ( ($L) and (!$H) and (@ag) )
+        {
+            print $INFILE "REMARK 950 CHAIN L    L    $L\n";
+            foreach my $Ag ( @ag ) {
+                print $INFILE "REMARK 950 CHAIN A    $Ag    $Ag\n";
+            }
+
+            print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
+            print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
+            foreach my $Ag ( @ag) {
+                print $INFILE "REMARK 950 ", `pdbheader -c $Ag -m $pdbPath`;
+                print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
+            }
+            
+        }
+
+        elsif ( ($H) and (!$L) and (!@ag) )
+        {
+            print $INFILE "REMARK 950 CHAIN H    H    $H\n";
+            print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
+            print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
+        }
+    elsif ( ($H) and (!$L) and (@ag) )
+        {
+            print $INFILE "REMARK 950 CHAIN H    H    $H\n";
+            foreach my $Ag ( @ag ) {
+                print $INFILE "REMARK 950 CHAIN A    $Ag    $Ag\n";
+            }
+
+            print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
+            print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
+            foreach my $Ag ( @ag) {
+                print $INFILE "REMARK 950 ", `pdbheader -c $Ag -m $pdbPath`;
+                print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
+            }
+            
+        }
+}
+
+sub headerBasic
 {
     my ($INFILE, $numbering, %resInfo) = @_;
     print $INFILE "REMARK 950 NUMBERING  $numbering\n";
