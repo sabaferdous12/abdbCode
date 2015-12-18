@@ -1,7 +1,7 @@
 package antibodyAntigen;
 use strict;
 use Carp;
-use warnings;
+#use warnings;
 use List::MoreUtils qw(uniq);
 use SFPerlVars;
 use Data::Dumper;
@@ -235,8 +235,8 @@ sub makeAntibodyAntigenComplex
                                          $fileType, $dir, $chainIdChainTpye_HRef,
                                          $numbering);
         movePDBs ($dir, $destFreeAb, $pdbId);
-        print {$LOG} "The $pdbId has free antibody (in additio to antibody-".
-            "antigen complex) - Moved to Free antibody data\n";
+        print {$LOG} "The $pdbId has free antibody (in addition to antibody-".
+            "antigen complex)/non-antigen protein - Moved to Free antibody data\n";
     }
     
     my @antigen;
@@ -317,10 +317,10 @@ sub makeAntibodyAntigenComplex
         $count++;    
     }
     
-    if ( (scalar @antigen) == 2 )
+    if ( (scalar @antigen) >= 2 )
     {
         $biAntigen = 1;
-        print {$LOG} "$pdbId: Antibody is bound with 2 antigens (bi-antigen)\n";
+        print {$LOG} "$pdbId: Antibody is bound with 2 or more antigens (multi-chain antigen)\n";
     }
 
     return $biAntigen;
@@ -368,7 +368,6 @@ sub getComplexInfoInHash
         }
         
     }
-    print Dumper (\%complex);
     
     return %complex;
 }
@@ -545,7 +544,7 @@ sub checkChainRedundancy
                     $heavyLightPairContact{$abPairs[$i]} = $abConts;
                     print {$LOG} $abPairs[$j]." is ". 
                         "found as non-redundant to other antibodies in PDB ".
-                            "and will be treated as antigen (bi-chain)\n";
+                            "and will be treated as idiotypic antigen\n";
                 }
             else {
                 next;
@@ -553,8 +552,7 @@ sub checkChainRedundancy
         }
     }
     @antigens = uniq (@antigens);
-    print Dumper (\%heavyLightPairContact);
-    
+        
     return (\%heavyLightPairContact, \@antigens);
 }
 
