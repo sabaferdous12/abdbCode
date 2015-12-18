@@ -4,7 +4,7 @@
 # Created: 02 Nov 2015
 # Version: 0.01
 
-use warnings;
+#use warnings;
 use strict;
 use SFPerlVars;
 use Data::Dumper;
@@ -68,6 +68,13 @@ my ($abagCount, $lightCount, $heavyCount, $fcCount,
     $supersededCount, $numErrorCount)
     = (0, 0, 0, 0, 0, 0);
 my ($ab, $numberingError);
+open (my $LH, ">>LH.list") or die "Can not open $!";
+open (my $L, ">>L.list") or die "Can not open $!";
+open (my $H, ">>H.list") or die "Can not open $!";
+open (my $FC, ">>FC.list") or die "Can not open $!";
+open (my $SC, ">>Superceded.list") or die "Can not open $!";
+open (my $NUMERROR, ">>Kabat_Error.list") or die "Can not open $!";
+
 
 open ( my $HEADER, ">header.dat") or die "Can not open file $!";
 open ( my $AGCHAIN, ">AntigenChains.dat") or die "Can not open file $!";
@@ -92,35 +99,42 @@ foreach my $pdb ( @PDBCodes )
     # checks for superseded PDB files
     if ( !( -e "$pdbPath" ) ) {
 #        push ( @superseded, $pdbId );
-        #print {$MASTER_LOG} "$pdbId is found Superseded\n\n";
+        print {$SC} "$pdb\n";
         $supersededCount++;
         next;
     }
     # Get antibody chain info
-    my ($light_ARef, $heavy_ARef, $antigen_ARef) =
+    my ($light_ARef, $heavy_ARef, $antigen_ARef,
+        $LHhybrid_ARef, $HLhybrid_ARef) =
         getChains ($pdbPath);
     my @light = @{$light_ARef};
     my @heavy = @{$heavy_ARef};
     my @antigens = @{$antigen_ARef};
+    my @LHhybrid = @{$LHhybrid_ARef};
+    my @HLhybrid = @{$HLhybrid_ARef};
 
+        
     print {$ABCHAIN} $pdb,":",join (",", @light), ",";
     print {$ABCHAIN} join (",", @heavy), "\n";
     print {$AGCHAIN} $pdb,":",join (",", @antigens), "\n";
         
-    if ( ( @light ) and (@heavy) )
+    if ( ( @light ) and (@heavy) and (!@LHhybrid) and (!@HLhybrid) )
         {
+                    
             $ab = "LH";
             $numberingError =
                 processAntibody ($pdb, $pdbPath, $nsch, $ab, $dir, $masterDir, $LOG, $numbering);
             if ( $numberingError)
             {
                 $numErrorCount ++;
+                print {$NUMERROR} "$pdb\n";
                 next;
             }
+            print {$LH} "$pdb\n";
             $abagCount++;
         }
    ################# Just light
-    elsif ( ( @light ) and ( !@heavy ) )
+    elsif ( ( @light ) and ( !@heavy ) and (!@LHhybrid) and (!@HLhybrid) )
         {
             $ab = "L";
             $numberingError =
@@ -128,12 +142,14 @@ foreach my $pdb ( @PDBCodes )
             if ( $numberingError)
             {
                 $numErrorCount ++;
+                print {$NUMERROR} "$pdb\n";
                 next;
             }
+            print {$L} "$pdb\n";
             $lightCount++;
         }
     ################# Just heavy
-    elsif ( ( !@light ) and (@heavy ) )
+    elsif ( ( !@light ) and (@heavy ) and (!@LHhybrid) and (!@HLhybrid))
         {
             $ab = "H";
             $numberingError =
@@ -141,12 +157,21 @@ foreach my $pdb ( @PDBCodes )
             if ( $numberingError)
             {
                 $numErrorCount ++;
+                print {$NUMERROR} "$pdb\n";
                 next;
             }
-            
+            print {$H} "$pdb\n";
             $heavyCount++;
         }
+    elsif ( ( @LHhybrid ) or (@HLhybrid ))
+    {
+        $numErrorCount ++;
+        print {$LOG} "$pdb is scFV\n";
+        print {$NUMERROR} "$pdb\n";
+        next;
+    }
     else {
+        print {$FC} "$pdb\n";
         $fcCount++;
     }
     
@@ -156,7 +181,7 @@ foreach my $pdb ( @PDBCodes )
     
 
 chdir '..';
-#last;
+last;
 
 }
 
