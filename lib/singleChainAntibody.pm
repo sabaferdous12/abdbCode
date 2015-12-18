@@ -1,7 +1,7 @@
 package singleChainAntibody;
 use strict;
 use Carp;
-use warnings;
+#use warnings;
 use SFPerlVars;
 use Data::Dumper;
 
@@ -115,7 +115,7 @@ sub processSingleChainAntibody
         makeFreeAntibodyComplex($pdbId, $pdbPath, \@singleChainAb, $count,
                                 $fileType, $dir, $chainIdChainTpye_HRef, $numbering);
         movePDBs ($dir, $destFreeAb, $pdbId);
-        print {$LOG} "This antibody is free chain (light/heavy) without any type of ".
+        print {$LOG} "This antibody is free chain (light-heavy) without any type of ".
             "bound antigen -- Moved to Free chain Data\n";
      
     }
