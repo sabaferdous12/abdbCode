@@ -1,7 +1,7 @@
 package antibodyProcessing;
 
 use strict;
-use warnings;
+#use warnings;
 use Data::Dumper;
 use List::MoreUtils qw (uniq);
 use SFPerlVars;
@@ -30,6 +30,7 @@ our @EXPORT_OK = qw (
                         mapChainsIDs
                         printHeader
                         getProcessedABchains
+                        getResolInfo
                 );
 # ************* getPDBPath *****************
 # Description: For given pdb it return local pdb file path
@@ -85,6 +86,21 @@ sub getChainTypeWithChainIDs
     $chainType{'Antigen'} = [];
     $chainType{'Light'} = [];
     $chainType{'Heavy'} = [];
+    $chainType{'Light/Heavy'} = [];
+    $chainType{'Heavy/Light'} = [];
+=pod    
+    #check for single chain hybrid FVs
+    my $scFVs = grep (/Light\/Heavy/, @chainInfo);
+    if ( $scFVs)
+    {
+        @chainInfo = ();
+        
+        @chainInfo = `pdbatoms $pdbPath | pdbchain | idabchain`;
+        `pdbatoms $pdbPath | pdbchain | pdbsplitchains`;
+        #splitPdb2Chains($pdbPath);
+    }
+    print "Test: @chainInfo\n";
+=cut    
     
     foreach my $line ( @chainInfo )
         {
@@ -116,6 +132,23 @@ sub getChainTypeWithChainIDs
                     $chainResSeq = getSEQRESFromPDB($pdbPath, $chainid);
                     $chainIdChainTpye{$chainid}{"H"}= $chainResSeq;
                 }
+            elsif ( $chainType eq "Light/Heavy" )
+                {    
+                    push ( @{ $chainType{'Light/Heavy'}}, $chainid );
+                    # Get SEQRES sequence from PDB file (SEQRES records)
+                    $chainResSeq = getSEQRESFromPDB($pdbPath, $chainid);
+                    $chainIdChainTpye{$chainid}{"LH"} = $chainResSeq; 
+                }
+
+            elsif ( $chainType eq "Heavy/Light" )
+                {    
+                    push ( @{ $chainType{'Heavy/Light'}}, $chainid );
+                    # Get SEQRES sequence from PDB file (SEQRES records)
+                    $chainResSeq = getSEQRESFromPDB($pdbPath, $chainid);
+                    $chainIdChainTpye{$chainid}{"HL"} = $chainResSeq; 
+                }
+
+            
         }
     
     return (\%chainType, \%chainIdChainTpye);
@@ -130,12 +163,16 @@ sub getChains
         getChainTypeWithChainIDs ($pdbPath);
     my %chainType = %{$chainType_HRef};
 
-    my (@antigen, @light, @heavy);
+#    print Dumper (\%chainType);
+    
+    my (@antigen, @light, @heavy, @LHhybrid, @HLhybrid);
     @antigen = @{$chainType{'Antigen'}};
     @light = @{$chainType{'Light'}};
     @heavy = @{$chainType{'Heavy'}};
-
-    return (\@light, \@heavy, \@antigen);
+    @LHhybrid = @{$chainType{'Light/Heavy'}};
+    @HLhybrid = @{$chainType{'Heavy/Light'}};
+    
+    return (\@light, \@heavy, \@antigen, \@LHhybrid, \@HLhybrid);
 }
 
 # ************* splitPdb2Chains *****************
@@ -606,7 +643,6 @@ sub printHeader
 {
     my ($INFILE, $numbering, $pdbPath, %mapedChains ) = @_;
     my %resInfo = getResolInfo($pdbPath);
-    print Dumper (\%mapedChains );
     
     my $L = $mapedChains{L};
     my $H = $mapedChains{H};
@@ -623,21 +659,43 @@ sub headerLHchains
     my ($INFILE, $pdbPath, $L, $H, $ag_ARef) = @_;
     my @ag = @{$ag_ARef};
     my ($sym, $AgID);
+    my ($L2, $H2);
+
+#    if ((!$L) and ($H)) {
+ #       $H2 = $H;
+  #  }
+   # elsif ( (!$H ) and ($L) )
+    #    {
+     #       $L2 = $L;
+      #  }
+    #else {
+        $L2 = $L;
+        $H2 = $H;
+    #}
+    
+    # if antibody chain as real labels as 0
+    if (  $L eq 0 ){
+        $L = 1;
+    }
+    if ( $H eq 0 ) {
+        $H = 1;
+    }
+
     
     if ( ($L) and ($H) and (!@ag ) ) 
     {
-        print $INFILE "REMARK 950 CHAIN L    L    $L\n";
-        print $INFILE "REMARK 950 CHAIN H    H    $H\n";
-        print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
-        print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
-        print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
-        print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
+        print $INFILE "REMARK 950 CHAIN L    L    $L2\n";
+        print $INFILE "REMARK 950 CHAIN H    H    $H2\n";
+        print $INFILE "REMARK 950 ", `pdbheader -c $L2 -m $pdbPath`;
+        print $INFILE "REMARK 950 ", `pdbheader -c $L2 -s $pdbPath`;
+        print $INFILE "REMARK 950 ", `pdbheader -c $H2 -m $pdbPath`;
+        print $INFILE "REMARK 950 ", `pdbheader -c $H2 -s $pdbPath`;
         
     }
     elsif ( ($L) and ($H) and ( @ag ) )
     {
-        print $INFILE "REMARK 950 CHAIN L    L    $L\n";
-        print $INFILE "REMARK 950 CHAIN H    H    $H\n";
+        print $INFILE "REMARK 950 CHAIN L    L    $L2\n";
+        print $INFILE "REMARK 950 CHAIN H    H    $H2\n";
         foreach my $Ag ( @ag ) {
             if ( ( $Ag eq "%l") or ($Ag eq "%h") )
             {
@@ -651,10 +709,10 @@ sub headerLHchains
             }
             
         }
-        print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
-        print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
-        print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
-        print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
+        print $INFILE "REMARK 950 ", `pdbheader -c $L2 -m $pdbPath`;
+        print $INFILE "REMARK 950 ", `pdbheader -c $L2 -s $pdbPath`;
+        print $INFILE "REMARK 950 ", `pdbheader -c $H2 -m $pdbPath`;
+        print $INFILE "REMARK 950 ", `pdbheader -c $H2 -s $pdbPath`;
 
         foreach my $Ag ( @ag ) {
             if ( ( $Ag eq "%l") or ($Ag eq "%h") )
@@ -669,21 +727,26 @@ sub headerLHchains
 
     elsif ( ($L) and (!$H) and (!@ag) )
         {
-            print $INFILE "REMARK 950 CHAIN L    L    $L\n";
-            print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
+            print $INFILE "REMARK 950 CHAIN L    L    $L2\n";
+            print $INFILE "REMARK 950 ", `pdbheader -c $L2 -m $pdbPath`;
+            print $INFILE "REMARK 950 ", `pdbheader -c $L2 -s $pdbPath`;
         }
     elsif ( ($L) and (!$H) and (@ag) )
         {
-            print "I AM LIGHT_ANTIGEN\n";
             
-            print $INFILE "REMARK 950 CHAIN L    L    $L\n";
+            print $INFILE "REMARK 950 CHAIN L    L    $L2\n";
             foreach my $Ag ( @ag ) {
+            if ( ( $Ag eq "%l") or ($Ag eq "%h") )
+            {
+                ($sym, $AgID) = split ("", $Ag);
+                $Ag = uc ($AgID);
+            }
                 print $INFILE "REMARK 950 CHAIN A    $Ag    $Ag\n";
             }
 
-            print $INFILE "REMARK 950 ", `pdbheader -c $L -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $L -s $pdbPath`;
+            print $INFILE "REMARK 950 ", `pdbheader -c $L2 -m $pdbPath`;
+            print $INFILE "REMARK 950 ", `pdbheader -c $L2 -s $pdbPath`;
+            
             foreach my $Ag ( @ag) {
                 print $INFILE "REMARK 950 ", `pdbheader -c $Ag -m $pdbPath`;
                 print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
@@ -693,21 +756,24 @@ sub headerLHchains
 
     elsif ( (!$L) and ($H) and (!@ag) )
         {
-            print $INFILE "REMARK 950 CHAIN H    H    $H\n";
-            print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
+            print $INFILE "REMARK 950 CHAIN H    H    $H2\n";
+            print $INFILE "REMARK 950 ", `pdbheader -c $H2 -m $pdbPath`;
+            print $INFILE "REMARK 950 ", `pdbheader -c $H2 -s $pdbPath`;
         }
     elsif ( (!$L) and ($H) and (@ag) )
         {
-            print "I AM HEAVY_PROTEIN\n";
-            
-            print $INFILE "REMARK 950 CHAIN H    H    $H\n";
+            print $INFILE "REMARK 950 CHAIN H    H    $H2\n";
             foreach my $Ag ( @ag ) {
+                if ( ( $Ag eq "%l") or ($Ag eq "%h") )
+                {
+                    ($sym, $AgID) = split ("", $Ag);
+                    $Ag = uc ($AgID);
+                }   
                 print $INFILE "REMARK 950 CHAIN A    $Ag    $Ag\n";
             }
 
-            print $INFILE "REMARK 950 ", `pdbheader -c $H -m $pdbPath`;
-            print $INFILE "REMARK 950 ", `pdbheader -c $H -s $pdbPath`;
+            print $INFILE "REMARK 950 ", `pdbheader -c $H2 -m $pdbPath`;
+            print $INFILE "REMARK 950 ", `pdbheader -c $H2 -s $pdbPath`;
             foreach my $Ag ( @ag) {
                 print $INFILE "REMARK 950 ", `pdbheader -c $Ag -m $pdbPath`;
                 print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
