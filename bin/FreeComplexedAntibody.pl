@@ -29,7 +29,7 @@ my ($DIFF, $COMBINED, $OUT);
 
 my $differenceFile = $ARGV[0];
 my $redundantCombinedFile = $ARGV[1];
-my ($antigenDir, $haptenDir);
+my ($proAntigenDir, $nproAntigenDir);
 
 
 open ($DIFF, '<', $differenceFile) or
@@ -40,70 +40,75 @@ open ($COMBINED, '<', $redundantCombinedFile) or
 my @combinedClus = <$COMBINED>;
 my $dir = ".";
 
-if ( defined ( $::a) ){
+if ( defined ( $::LH) ){
     open ( $OUT, '>', "$dir/FreeAntibody_AntibodyAntigen.list")
         or die "Can not open file to write\n";
     print $OUT "Free Antibody:Complexed Antibody\n";
-    $antigenDir = "AntibodyAntigen_Martin";
-    $haptenDir = "AntibodyHapten_Martin";
-    getFreeVsComplexedList ($DIFF, $OUT, $antigenDir, $haptenDir);    
+    $proAntigenDir = "LH_Protein_Martin";
+    $nproAntigenDir = "LH_NonProtein_Martin";
+    getFreeVsComplexedList ($DIFF, $OUT, $proAntigenDir, $nproAntigenDir);    
     
 }     
-if ( defined ( $::l) ){
+if ( defined ( $::L) ){
     open ( $OUT, '>', "$dir/Light_LightAntigen.list")
         or die "Can not open file to write\n";
     print $OUT "Free Bence Jones (Light Chains):Complexed Bence Jones\n";
-    $antigenDir = "LightAntigen_Martin";
-    $haptenDir = "LightHapten_Martin";
-    getFreeVsComplexedList ($DIFF, $OUT, $antigenDir, $haptenDir);
+    $proAntigenDir = "L_Protein_Martin";
+    $nproAntigenDir = "L_NonProtein_Martin";
+    getFreeVsComplexedList ($DIFF, $OUT, $proAntigenDir, $nproAntigenDir);
 }
-if  ( defined ( $::h) ) {
+if  ( defined ( $::H) ) {
     open ( $OUT, '>', "$dir/Heavy_HeavyAntigen.list")
         or die "Can not open file to write\n";
     print $OUT "Free Camelids (Heavy Chains):Complexed Camelids\n";
-    $antigenDir = "HeavyAntigen_Martin";
-    $haptenDir = "HeavyHapten_Martin";
-    getFreeVsComplexedList ($DIFF, $OUT, $antigenDir, $haptenDir);
+    $proAntigenDir = "H_Protein_Martin";
+    $nproAntigenDir = "H_NonProtein_Martin";
+    getFreeVsComplexedList ($DIFF, $OUT, $proAntigenDir, $nproAntigenDir);
 }
              
 
      
 sub getFreeVsComplexedList{
-    my ($DIFF, $OUT, $antigenDir, $haptenDir) = @_;
+    my ($DIFF, $OUT, $proAntigenDir, $nproAntigenDir) = @_;
     my (@free, @complex);
     my $elemPdb;
     
     while (my $line = <$DIFF>)
+    {
+        chomp $line;
+        my ($records) = grep (m/$line/, @combinedClus);
+        my @redundants = split (/,\s+/, $records);
+        
+        foreach my $elem (@redundants)
         {
-            chomp $line;
-            my ($records) = grep (m/$line/, @combinedClus);
-            my @redundants = split (/,\s+/, $records);
-            
-            foreach my $elem (@redundants)
+            chomp $elem;
+            $elemPdb = $elem.".pdb";
+
+            if ( (-e "./Data/$proAntigenDir/$elemPdb") or
+                     (-e "./Data/$nproAntigenDir/$elemPdb")) 
+             {
+
+           
+                 push (@complex, $elem);
+             }
+            else
                 {
-                    chomp $elem;
-                    $elemPdb = $elem.".pdb";
+                    push (@free, $elem);
                     
-                        if ( (-e "./$antigenDir/$elemPdb") or
-                                 (-e "./$haptenDir/$elemPdb")) 
-                            {
-                                push (@complex, $elem);
-                            }
-                    else
-                        {
-                            push (@free, $elem);
-                        }
                 }
-            # To skip any cluster without free antibody
-            if ( (!@complex ) or (!@free)) {
-                next;
-            }
-            else {
-                print $OUT join(',', @free), ":", join(',', @complex), "\n";
-            }
-            
-            @free = ();
-            @complex = ();
         }
+        
+        # To skip any cluster without free antibody
+        if ( (!@complex ) or (!@free)) {
+            next;
+        }
+        else {
+            print $OUT join(',', @free), ":", join(',', @complex), "\n";
+        }
+
+
+        @free = ();
+        @complex = ();
+    }
 }
 
