@@ -181,7 +181,7 @@ foreach my $pdb ( @PDBCodes )
     
 
 chdir '..';
-#last;
+last;
 
 }
 
