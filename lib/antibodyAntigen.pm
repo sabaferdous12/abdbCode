@@ -518,14 +518,15 @@ sub checkChainRedundancy
     my %chainIdChainTpye = %{$chainIdChainTpye_HRef};
     my @antigens = @{$antigen_ARef};
     my %heavyLightPairContact = %{$heavyLightPairContact_HRef};    
-    my @abPairs = keys (%{$heavyLightPairContact_HRef});
-        
+    my @abPairs = sort keys (%{$heavyLightPairContact_HRef});
+
+    
     for (my $i = 0 ; $i<= $#abPairs-1; $i++ )
     {
         my ($l1, $h1) = split ("", $abPairs[$i]);
         my $abConts = $heavyLightPairContact{$abPairs[$i]};
         
-        for (my $j = $i+1; $j<= $#abPairs; $j++ )
+        for (my $j = $i+1; $j<= $#abPairs; ++$j )
         {
             my ($l2, $h2) =split ("", $abPairs[$j]);
             # Check pairwise redundancy by using index function
@@ -549,10 +550,12 @@ sub checkChainRedundancy
             else {
                 next;
             }
+
         }
     }
     @antigens = uniq (@antigens);
-        
+print Dumper (\%heavyLightPairContact);
+    
     return (\%heavyLightPairContact, \@antigens);
 }
 
@@ -677,6 +680,11 @@ sub assembleCDRsAndFWsWithAntigen
         
         foreach my $agChain ( @$antigenChains )
         {
+            # If non-redundant antibody is treated as antigen and it has L and H
+            # chain labels then ignore them and do not assemble them with
+            # antibody chain
+            next if ( ( $agChain eq "L") or ( $agChain eq "H") );
+            
             my $agPDB = $agChain.".pdb";
             #  next if ( $agPDB eq '0.pdb');# to deal exception in 3J30 (split prob)
             # Open antigen PDB file
@@ -741,8 +749,16 @@ sub assembleCDRsAndFWsWithAntigen
                     $antibodyAntigenContacts{$antibody}->{$agChain} = 0;
                 }
                 else {
-                    $antibodyAntigenContacts{$antibody}->{$agChain}
-                    = $cdr_ag_conts;
+                    # To drop antigens making 2-15 contacts with CDRs
+                    # They are most likely X-ray crytal of antigen bound
+                    # with another antibody
+                    if ( $cdr_ag_conts >= 15 ) {
+                        $antibodyAntigenContacts{$antibody}->{$agChain}
+                            = $cdr_ag_conts;
+                    }
+                    else {
+                        $antibodyAntigenContacts{$antibody}->{$agChain} = 0;
+                    }
                 }
                 
             }    
