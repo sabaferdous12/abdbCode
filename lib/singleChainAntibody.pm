@@ -75,17 +75,20 @@ sub processSingleChainAntibody
     # Check for haptens bound with CDRs
     my $hapten = hasHaptenSingleChain ($pdbPath, \@singleChainAb, $chainIdChainTpye_HRef);
     my $fileType;
+    my %fileTypeH;
     
     # Checks for haptens and move them to non-Protein data 
     if ( ($hapten) and (!@antigenIds) )
     {
-        $fileType = "hap";
-        processHapten($pdbPath, \@singleChainAb);
+
+        %fileTypeH = processHapten($pdbPath, \@singleChainAb, $ab);
+        
         makeFreeAntibodyComplex ($pdbId, $pdbPath, \@singleChainAb, $count, $fileType,
-                                 $dir, $chainIdChainTpye_HRef, $numbering);
-        movePDBs ($dir, $destNonPro, $pdbId);
-        print {$LOG} "This antibody is bound with hapten -- Moved to non- ".
-            "protein data\n";
+                                 $dir, $chainIdChainTpye_HRef, $numbering,
+                                 $LOG, $destNonPro, $destFreeAb, %fileTypeH);
+#        movePDBs ($dir, $destNonPro, $pdbId);
+ #       print {$LOG} "This antibody is bound with hapten -- Moved to non- ".
+  #          "protein data\n";
     }    
 
     # Checks for protein antigens (Further checking is within
@@ -96,27 +99,28 @@ sub processSingleChainAntibody
         $numberingError = processAntibodyAntigen($pdbId, $pdbPath, $ab, \@antigenIds,
                                \@singleChainAb, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
-                               $destNonPro, $destFreeAb, $numbering);
+                               $destNonPro, $destFreeAb, $numbering, %fileTypeH);
         
     }
     # Antibody bound with antigen and haptens - Moved to protein antigen data
     elsif ( (@antigenIds) and ($hapten) )
     {
-        $fileType = "hap";
-        processHapten($pdbPath, \@singleChainAb);
+#        $fileType = "hap";
+        %fileTypeH =  processHapten($pdbPath, \@singleChainAb, $ab);
         $numberingError = processAntibodyAntigen($pdbId, $pdbPath, $ab, \@antigenIds,
                                \@singleChainAb, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
-                               $destNonPro, $destFreeAb, $numbering);
+                               $destNonPro, $destFreeAb, $numbering, %fileTypeH);
     }
     # Checks for free light and heavy chains
     else {
         $fileType = "num";
         makeFreeAntibodyComplex($pdbId, $pdbPath, \@singleChainAb, $count,
-                                $fileType, $dir, $chainIdChainTpye_HRef, $numbering);
-        movePDBs ($dir, $destFreeAb, $pdbId);
-        print {$LOG} "This antibody is free chain (light-heavy) without any type of ".
-            "bound antigen -- Moved to Free chain Data\n";
+                                $fileType, $dir, $chainIdChainTpye_HRef, $numbering,
+                                $LOG, $destNonPro, $destFreeAb, %fileTypeH);
+#        movePDBs ($dir, $destFreeAb, $pdbId);
+ #       print {$LOG} "This antibody is free chain (light-heavy) without any type of ".
+  #          "bound antigen -- Moved to Free chain Data\n";
      
     }
     return $numberingError;
