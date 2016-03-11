@@ -87,17 +87,19 @@ sub processAntibody
     
     my $hapten = hasHapten ($pdbPath, \@antibodyPairs);
     my $fileType;
-
+    my %fileType;
+    
     # Checks for haptens and move them to non-Protein data
     if ( ( $hapten) and (!@antigens) )
     {
-        $fileType = "hap";
-        processHapten($pdbPath, \@antibodyPairs);
+#        $fileType = "hap";
+        %fileType = processHapten($pdbPath, \@antibodyPairs, $ab);
         makeFreeAntibodyComplex($pdbId, $pdbPath, \@antibodyPairs, $count,
-                                $fileType, $dir, $chainIdChainTpye_HRef, $numbering);
-        movePDBs ($dir, $destNonPro, $pdbId);
-        print {$LOG} "This antibody is bound with hapten -- Moved to non- ".
-            "protein data antigen data\n";
+                                $fileType, $dir, $chainIdChainTpye_HRef, $numbering,
+                                $LOG, $destNonPro, $destFreeAb, %fileType);
+       # movePDBs ($dir, $destNonPro, $pdbId);
+       # print {$LOG} "This antibody is bound with hapten -- Moved to non- ".
+        #    "protein data antigen data\n";
     }
     # Checks for protein antigens (Further checking is within
     # processAntibodyAntigen subroutine)
@@ -108,18 +110,18 @@ sub processAntibody
             processAntibodyAntigen($pdbId, $pdbPath, $ab, $antigen_ARef,
                                \@antibodyPairs, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
-                               $destNonPro, $destFreeAb, $numbering);
+                               $destNonPro, $destFreeAb, $numbering, %fileType);
     }
     
     elsif ( ( @antigens) and ($hapten))
     {
-        $fileType = "hap";
-        processHapten($pdbPath, \@antibodyPairs);
+#        $fileType = "hap";
+        my %fileType = processHapten($pdbPath, \@antibodyPairs, $ab);
         $numberingError =
             processAntibodyAntigen($pdbId, $pdbPath, $ab, $antigen_ARef,
                                \@antibodyPairs, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
-                               $destNonPro, $destFreeAb, $numbering);
+                               $destNonPro, $destFreeAb, $numbering, %fileType);
     }
 
     # Checks for free antibodies and move then in Free antibodies data
@@ -127,10 +129,11 @@ sub processAntibody
     {
         $fileType = "num";
         makeFreeAntibodyComplex($pdbId, $pdbPath, \@antibodyPairs, $count,
-                                $fileType, $dir, $chainIdChainTpye_HRef, $numbering);
-        movePDBs ($dir, $destFreeAb, $pdbId);
-        print {$LOG} "This antibody is free antibody without any type of ".
-            "bound antigen -- Moved to Free antibody Data\n";
+                                $fileType, $dir, $chainIdChainTpye_HRef, $numbering,
+                                $LOG, $destNonPro, $destFreeAb, %fileType);
+#        movePDBs ($dir, $destFreeAb, $pdbId);
+ #       print {$LOG} "This antibody is free antibody without any type of ".
+  #          "bound antigen -- Moved to Free antibody Data\n";
     }
     return $numberingError;
     
@@ -140,13 +143,21 @@ sub processAntibody
 sub makeFreeAntibodyComplex
 {
     my ($pdbId, $pdbPath, $antibodyPair_ARef, $count, $fileType,
-        $dir, $chainIdChainTpye_HRef, $numbering) = @_;
+        $dir, $chainIdChainTpye_HRef, $numbering, $LOG,
+        $destNonPro, $destFreeAb, %fileTypeH) = @_;
     my @antibodyPairs = @ {$antibodyPair_ARef};
         
     my ($lookForFile, $newFile);
     
     foreach my $antibodyPair (@antibodyPairs)
     {
+        if ( %fileTypeH ) {
+            $fileType = $fileTypeH{$antibodyPair};
+        }
+        else {
+            
+            $fileType = "num";
+        }
         $lookForFile = $antibodyPair."_".$fileType.".pdb";
         $newFile = $pdbId."_".$count.".pdb";
         
@@ -165,7 +176,19 @@ sub makeFreeAntibodyComplex
         
             #`mv $lookForFile $newFile`;
     $count++;
-    
+
+        if ( $fileType eq "hap") {
+            movePDBs ($dir, $destNonPro, $pdbId);
+            print {$LOG} "This antibody is bound with hapten -- Moved to non- ".
+                "protein data antigen data\n";
+        }
+        else {
+            movePDBs ($dir, $destFreeAb, $pdbId);
+            print {$LOG} "This antibody is Free -- Moved to Free ".
+                "antibody data\n";
+
+                    
+        }
     }
     return $count;
 }
@@ -174,7 +197,7 @@ sub processAntibodyAntigen
 {
     my ($pdbId, $pdbPath, $ab, $antigenIds_ARef, $antibodyPairs_ARef,
         $fileType, $dir, $masterDir, $LOG, $chainIdChainTpye_HRef,
-        $destPro, $destNonPro, $destFreeAb, $numbering) = @_;
+        $destPro, $destNonPro, $destFreeAb, $numbering, %fileType) = @_;
     my @antibodyPairs = @{$antibodyPairs_ARef};
 
     my $cdrError = 0;    
@@ -209,7 +232,7 @@ sub processAntibodyAntigen
                                                $dir, $masterDir, $LOG,
                                                $chainIdChainTpye_HRef,
                                                $destPro, $destNonPro, $destFreeAb,
-                                               $numbering, %complexInfo);
+                                               $numbering, \%complexInfo, \%fileType);
     return  $cdrError;
     
 }
@@ -219,11 +242,14 @@ sub makeAntibodyAntigenComplex
     {
     my ( $pdbId, $pdbPath,$fileType, $dir, $masterDir, $LOG,
          $chainIdChainTpye_HRef, $destPro, $destNonPro, $destFreeAb,
-         $numbering, %complexInfo) = @_;
+         $numbering, $complexInfo_HRef, $fileType_HRef) = @_;
     #my $dir = '.';
     my $count = 1;
     my $biAntigen = 0;
     my $chaintype = $SFPerlVars::chaintype;
+    my %complexInfo = %{$complexInfo_HRef};
+    my %fileTypeH = %{$fileType_HRef};
+    
     
     my @Freeantibodychains =
         grep {$complexInfo{$_} eq "NULL" } keys %complexInfo;
@@ -233,10 +259,11 @@ sub makeAntibodyAntigenComplex
         $count = makeFreeAntibodyComplex($pdbId, $pdbPath,
                                          \@Freeantibodychains, $count,
                                          $fileType, $dir, $chainIdChainTpye_HRef,
-                                         $numbering);
-        movePDBs ($dir, $destFreeAb, $pdbId);
-        print {$LOG} "The $pdbId has free antibody (in addition to antibody-".
-            "antigen complex)/non-antigen protein - Moved to Free antibody data\n";
+                                         $numbering, $LOG, $destNonPro, $destFreeAb,
+                                         %fileTypeH);
+        #movePDBs ($dir, $destFreeAb, $pdbId);
+        #print {$LOG} "The $pdbId has free antibody (in addition to antibody-".
+         #   "antigen complex)/non-antigen protein - Moved to Free antibody data\n";
     }
     
     my @antigen;
@@ -244,6 +271,8 @@ sub makeAntibodyAntigenComplex
     
     foreach my $ab_pair( keys %complexInfo )
     {
+        $fileType = $fileTypeH{$ab_pair};
+        
         my $numberedAntibody;
         
         if ( $fileType eq "num" )
@@ -253,6 +282,10 @@ sub makeAntibodyAntigenComplex
         elsif ( $fileType eq "hap" )
         {
             $numberedAntibody = $ab_pair."_hap.pdb";
+        }
+        else {
+            
+            $numberedAntibody = $ab_pair."_num.pdb";
         }
             my $antigenRef;
         
@@ -554,7 +587,6 @@ sub checkChainRedundancy
         }
     }
     @antigens = uniq (@antigens);
-print Dumper (\%heavyLightPairContact);
     
     return (\%heavyLightPairContact, \@antigens);
 }
