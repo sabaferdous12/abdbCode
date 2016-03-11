@@ -552,17 +552,96 @@ sub hasHapten
 
 sub processHapten
 {
-    my ($pdbPath, $antibodyPair_ARef ) =@_;
-
+    my ($pdbPath, $antibodyPair_ARef,$ab ) =@_;
+    my $hashapten = $SFPerlVars::hashapten;
+    my $haptenFlag=0;
+    my %fileType;
+    
     my @antibodyPairs = @ {$antibodyPair_ARef};
-
+    my (@hapMole, @hapInter);
+    
     foreach  my $antibodyPair (@antibodyPairs)
     {
-        my $antibodyFile = $antibodyPair."_num.pdb";
-        my $outputFile = $antibodyPair."_hap.pdb";
-        `pdbaddhet $pdbPath $antibodyFile $outputFile`;
+        @hapMole = ();
+        @hapInter = ();
+        my @haptens;
         
-    }
+        if ( $ab eq "L") {
+            @haptens = `$hashapten -l $antibodyPair $pdbPath`;
+        }
+        elsif (  $ab eq "H" ) {
+            @haptens = `$hashapten -h $antibodyPair $pdbPath`;
+        }
+        elsif ( $ab eq "LH" ){
+            my ($L, $H) = split ("", $antibodyPair);
+            @haptens = `$hashapten -l $L -h $H $pdbPath`;
+        }
+        
+        if ( ! @haptens) {
+            $fileType{$antibodyPair} = "num";
+            next;
+        }
+        
+        # This For Loop Is To Store hapten molecule name from
+        # hasHapten program output.
+        foreach my $hapten( @haptens ) {
+            my @hap = split (" ", $hapten);
+            my $mol = $hap[1]; # molecule name
+            my $molInteraction = $hap[2]; # chain label and resSeq
+
+            push (@hapInter, $molInteraction);
+            push (@hapMole, $mol); 
+        }
+        # To remove duplicates
+        @hapMole = uniq (@hapMole);
+        @hapInter = uniq (@hapInter);
+        
+#        print "Test: @hapMole:   @hapInter\n";
+        
+        my $antibodyFile = $antibodyPair."_num.pdb";
+        my $outputFile_temp = $antibodyPair."_hap_temp.pdb";
+        my $outputFile = $antibodyPair."_hap.pdb";
+        open (my $OUT, '>', $outputFile);
+
+        # Writing all HETATM records to antibody file
+        `pdbaddhet $pdbPath $antibodyFile $outputFile_temp`;
+        # Parsing HETATMs for only identified haptens and discarding the rest
+        open (my $IN, '<', $outputFile_temp);
+        my @HET = <$IN>;
+        
+        my @atomRec = grep { $_ =~ m/^ATOM|^TER/} @HET;
+        print {$OUT} @atomRec;
+
+        # Obtaining HETATMS for Haptens
+        foreach my $hapMol( @hapMole ) {
+            # Obtaining Haptens for multiple resSeq and Chains
+            foreach my $molInter( @hapInter) {
+                my $chainId = substr ($molInter, 0, 1);
+                my $resSeq = substr ($molInter, 1);
+
+                # To grep this pattern SO4 L 214 from HETATM records
+                my @hapHetRec = grep { $_ =~ m/$hapMol $chainId $resSeq/ |
+                                           $_ =~ m/$hapMol $chainId  $resSeq/ |
+                                               $_ =~ m/$hapMol $chainId   $resSeq/ |
+                                                   $_ =~ m/$hapMol $chainId$resSeq/ } @HET;
+                # This check is to eliminate any small solvent molecule like: SO4, PO4
+
+                if ( scalar @hapHetRec > 5) {
+                    print {$OUT} @hapHetRec;
+                    $haptenFlag = 1;
+                    $fileType{$antibodyPair} = "hap";
+                }
+                else {
+                    $fileType{$antibodyPair} = "num";
+                    next;
+                }
+            }
+        }
+        
+    }#abtibody pair
+
+    return %fileType;
+    
 }
 
 
