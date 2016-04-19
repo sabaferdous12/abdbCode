@@ -32,7 +32,8 @@ cat << __EOF__
 
 </table>
 <p><a href="http://www.bioinf.org.uk/abs/abdb/Data/Kabat_Failed.list">List of antibodies that failed the numbering</a></p>
-</div>
+<p><a href="http://www.bioinf.org.uk/abs/abdb/Data/Martin_logs/multi-chain.list">List of antibodies bound to multiple antigens</a></p>
+<p><a href="http://www.bioinf.org.uk/abs/abdb/Data/Martin_logs/scFV.list">List of single chain antibodies (scFVs)</a></p>
 
 </table>
 </div>
