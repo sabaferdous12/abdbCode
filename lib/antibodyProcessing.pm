@@ -732,6 +732,24 @@ sub printHeader
     headerBasic($INFILE, $numbering, %resInfo);    
     headerLHchains ($INFILE, $pdbPath, $L, $H, \@ag);
 }
+# The subroutine extracts SEQRES from PDB file for given chain label...
+sub getSEQRES
+{
+    my ($pdbPath, $chainID) = @_;
+    open (my $IN, $pdbPath) or die "Error in opening file\n";
+    my @fileContent = <$IN>;
+    my @seqRes;
+    
+    foreach my $line (@fileContent ) {
+        if ( ( $line =~ m/SEQRES/ ) and ($line =~ m/\s+$chainID\s+/) )
+        {
+            push (@seqRes, $line);
+        }
+    }
+    
+   return @seqRes;
+}     
+          
 
 sub headerLHchains
 {
@@ -740,17 +758,8 @@ sub headerLHchains
     my ($sym, $AgID);
     my ($L2, $H2);
 
-#    if ((!$L) and ($H)) {
- #       $H2 = $H;
-  #  }
-   # elsif ( (!$H ) and ($L) )
-    #    {
-     #       $L2 = $L;
-      #  }
-    #else {
         $L2 = $L;
         $H2 = $H;
-    #}
     
     # if antibody chain as real labels as 0
     if (  $L eq 0 ){
@@ -769,6 +778,12 @@ sub headerLHchains
         print $INFILE "REMARK 950 ", `pdbheader -c $L2 -s $pdbPath`;
         print $INFILE "REMARK 950 ", `pdbheader -c $H2 -m $pdbPath`;
         print $INFILE "REMARK 950 ", `pdbheader -c $H2 -s $pdbPath`;
+        my @seqRes = getSEQRES($pdbPath, $L2);
+        print $INFILE @seqRes;
+        
+        @seqRes = getSEQRES($pdbPath, $H2);
+        print $INFILE @seqRes;
+        
         
     }
     elsif ( ($L) and ($H) and ( @ag ) )
@@ -802,6 +817,24 @@ sub headerLHchains
             print $INFILE "REMARK 950 ", `pdbheader -c $Ag -m $pdbPath`;
             print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
         }
+# Printing SEQRES for antibody
+        my @seqRes = getSEQRES($pdbPath, $L2);
+        print $INFILE @seqRes;
+        
+        @seqRes = getSEQRES($pdbPath, $H2);
+        print $INFILE @seqRes;
+# Printing SEQRES for antigen
+        foreach my $Ag ( @ag ) {
+            if ( ( $Ag eq "%l") or ($Ag eq "%h") )
+            {
+                ($sym, $AgID) = split ("", $Ag);
+                $Ag = uc ($AgID);
+            }
+            @seqRes = getSEQRES($pdbPath, $Ag);
+            print $INFILE @seqRes;
+            
+        }
+        
     }
 
     elsif ( ($L) and (!$H) and (!@ag) )
@@ -809,6 +842,10 @@ sub headerLHchains
             print $INFILE "REMARK 950 CHAIN L    L    $L2\n";
             print $INFILE "REMARK 950 ", `pdbheader -c $L2 -m $pdbPath`;
             print $INFILE "REMARK 950 ", `pdbheader -c $L2 -s $pdbPath`;
+
+            my @seqRes = getSEQRES($pdbPath, $L2);
+            print $INFILE @seqRes;
+           
         }
     elsif ( ($L) and (!$H) and (@ag) )
         {
@@ -830,7 +867,21 @@ sub headerLHchains
                 print $INFILE "REMARK 950 ", `pdbheader -c $Ag -m $pdbPath`;
                 print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
             }
+
+            my  @seqRes = getSEQRES($pdbPath, $L2);
+            print $INFILE @seqRes;
             
+            foreach  my $Ag ( @ag ) {
+                if ( ( $Ag eq "%l") or ($Ag eq "%h") )
+                 {
+                     ($sym, $AgID) = split ("", $Ag);
+                     $Ag = uc ($AgID);
+                 }
+                @seqRes = getSEQRES($pdbPath, $Ag);
+                print $INFILE @seqRes;
+                
+            }
+                        
         }
 
     elsif ( (!$L) and ($H) and (!@ag) )
@@ -838,6 +889,9 @@ sub headerLHchains
             print $INFILE "REMARK 950 CHAIN H    H    $H2\n";
             print $INFILE "REMARK 950 ", `pdbheader -c $H2 -m $pdbPath`;
             print $INFILE "REMARK 950 ", `pdbheader -c $H2 -s $pdbPath`;
+            my @seqRes = getSEQRES($pdbPath, $H2);
+            print $INFILE @seqRes;
+            
         }
     elsif ( (!$L) and ($H) and (@ag) )
         {
@@ -857,8 +911,21 @@ sub headerLHchains
                 print $INFILE "REMARK 950 ", `pdbheader -c $Ag -m $pdbPath`;
                 print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
             }
+            my @seqRes = getSEQRES($pdbPath, $H2);
+            print $INFILE @seqRes;
+            
+            foreach  my $Ag ( @ag ) {
+                if  ( ( $Ag eq "%l") or ($Ag eq "%h") )
+                {
+                    ($sym, $AgID) = split ("", $Ag);
+                    $Ag = uc ($AgID);
+                }
+                @seqRes = getSEQRES($pdbPath, $Ag);
+                print $INFILE @seqRes;
+            }
             
         }
+    
 }
 
 sub headerBasic
