@@ -227,7 +227,7 @@ cd ..
 # Stats for unprocessed data
 cd Martin_logs
 
-grep -r "multi-chain\|idiotypic" ../Dataprep*Martin/ | awk -F "/" '{print $3}' | sort | uniq >multi-chain.list
+grep -r "multi-chain" ../Dataprep*Martin/ | awk -F "/" '{print $3}' | sort | uniq >multi-chain.list
 grep -r "scFV" ../Dataprep*Martin/ | awk -F "/" '{print $3}' | sort | uniq >scFV.list
 
 kabatError=`awk 'END {print NR}' Kabat_Error.list`;
