@@ -139,6 +139,8 @@ foreach my $pdb ( @PDBCodes )
             $ab = "L";
             $numberingError =
                 processSingleChainAntibody($pdb, $pdbPath, $nsch, $ab, $dir, $masterDir, $LOG, $numbering);
+            #    processAntibody($pdb, $pdbPath, $nsch, $ab, $dir, $masterDir, $LOG, $numbering);
+            
             if ( $numberingError)
             {
                 $numErrorCount ++;
@@ -181,7 +183,7 @@ foreach my $pdb ( @PDBCodes )
     
 
 chdir '..';
-#last;
+last;
 
 }
 
