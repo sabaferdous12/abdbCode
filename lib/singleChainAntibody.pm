@@ -13,6 +13,8 @@ use antibodyAntigen qw (
                            antibodyNumbering
                            makeFreeAntibodyComplex
                            processAntibodyAntigen
+                           getInterchainContacts
+                           antibodyAssembly
                    );
 
 use antibodyProcessing qw (
@@ -54,11 +56,19 @@ sub processSingleChainAntibody
         @singleChainAb = @{$chainType{Heavy}};
     }
 
+#    my %dimerPairs = pairDimerChains($pdbPath, $LOG, \@singleChainAb);
+#    my @dimerPairs = keys %dimerPairs;
+    
     my @antigenIds =
         checkSingleChainRedundancy ($chainType_HRef, $chainIdChainTpye_HRef, $LOG, $ab);
-
+    
+ #  antibodyAssembly ( @dimerPairs );
+#    antibodyAssembly ( @singleChainAb );
+    
+        
+#    eval { antibodyNumbering ( \@dimerPairs, $nsch );
     eval { antibodyNumbering ( \@singleChainAb, $nsch );
-           1;
+                      1;
        };
 
     if ($@ ) {
@@ -72,8 +82,11 @@ sub processSingleChainAntibody
         print {$LOG} "All the antibodies in $pdbId has been numbered by".
             " antibody numbering program\n";
     }
+    #antibodyAssembly ( @singleChainAb );
+        
     # Check for haptens bound with CDRs
     my $hapten = hasHaptenSingleChain ($pdbPath, \@singleChainAb, $chainIdChainTpye_HRef);
+    #    my $hapten = hasHaptenSingleChain ($pdbPath, \@dimerPairs, $chainIdChainTpye_HRef);
     my $fileType;
     my %fileTypeH;
     
@@ -86,9 +99,6 @@ sub processSingleChainAntibody
         makeFreeAntibodyComplex ($pdbId, $pdbPath, \@singleChainAb, $count, $fileType,
                                  $dir, $chainIdChainTpye_HRef, $numbering,
                                  $LOG, $destNonPro, $destFreeAb, %fileTypeH);
-#        movePDBs ($dir, $destNonPro, $pdbId);
- #       print {$LOG} "This antibody is bound with hapten -- Moved to non- ".
-  #          "protein data\n";
     }    
 
     # Checks for protein antigens (Further checking is within
@@ -118,15 +128,37 @@ sub processSingleChainAntibody
         makeFreeAntibodyComplex($pdbId, $pdbPath, \@singleChainAb, $count,
                                 $fileType, $dir, $chainIdChainTpye_HRef, $numbering,
                                 $LOG, $destNonPro, $destFreeAb, %fileTypeH);
-#        movePDBs ($dir, $destFreeAb, $pdbId);
- #       print {$LOG} "This antibody is free chain (light-heavy) without any type of ".
-  #          "bound antigen -- Moved to Free chain Data\n";
-     
     }
     return $numberingError;
     
 }
-
+sub pairDimerChains
+{
+    my ($pdbPath, $LOG, $singleChainIDs_REF) = @_;
+    my %chainContacts = getInterchainContacts($pdbPath);
+    print {$LOG} "Antibody inter-chain contacts are: \n";
+    print {$LOG} Dumper ( \%chainContacts );
+    my %dimers;
+    
+    my @singleChainIDs = @{$singleChainIDs_REF};
+    print "ANTIBODY: @singleChainIDs\n";
+    foreach my $ab1 (@singleChainIDs ) {
+        foreach my $ab2 (@singleChainIDs) {
+            my $pair = $ab1.$ab2;
+            if ( exists $chainContacts{$pair}) {
+                if ( $chainContacts{$pair} > 80 ) {
+                    $dimers{$pair} = $chainContacts{$pair};
+                    
+                }
+            }
+        }
+    }
+     # removing duplicate values
+    %dimers = reverse %{ {reverse %dimers} };
+    print {$LOG} "The dimerizing pairs are: \n", Dumper (\%dimers);
+    return (%dimers);
+}
+  
 sub hasHaptenSingleChain
 {
     my ($pdbPath, $singleChainAb_ARef, $chainIdChainTpye_HRef) = @_;
