@@ -25,7 +25,9 @@ our @EXPORT_OK = qw (
         antibodyNumbering
 	makeFreeAntibodyComplex
         processAntibodyAntigen
-);
+        getInterchainContacts
+        antibodyAssembly
+                );
 sub processAntibody
 {
     my ($pdbId, $pdbPath, $nsch, $ab, $dir, $masterDir, $LOG, $numbering) = @_;
