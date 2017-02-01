@@ -59,7 +59,9 @@
 use strict;
 #use warnings;
 use Data::Dumper;
-use Cwd;
+use Cwd qw(abs_path getcwd);
+use FindBin;
+use lib abs_path("$FindBin::Bin/../lib");
 use config;
 
 use File::Basename;
