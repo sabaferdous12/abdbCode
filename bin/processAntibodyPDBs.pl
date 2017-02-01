@@ -6,10 +6,17 @@
 
 #use warnings;
 use strict;
+use Cwd qw(abs_path);
+use FindBin;
+use lib abs_path("$FindBin::Bin/../lib");
+
+
 use config;
 use Data::Dumper;
 use File::Copy;
 use Cwd;
+
+
 
 use general qw (readDirPDB);
 use antibodyAntigen qw (processAntibody);
