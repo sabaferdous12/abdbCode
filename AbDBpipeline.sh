@@ -9,6 +9,7 @@
 #   Function:   This is an automatic pipeline to process the Data for AbDb and
 #               It generates data just for all numbering schemes
 #   Usage:      ./AbDBpipeline.sh <list of antibody PDB codes>
+#               Note: abdb.cfg file should be in current working dir 
 #
 #
 #   Copyright:  (c) UCL, Saba Ferdous, 2014
@@ -72,38 +73,24 @@ function process
     Combined=$4
     scheme=$5
     label=$6
+
     Redundant="Redundant_files"
     mkdir -p $Combined
     mkdir -p $Redundant
+
     # copy all the complexes in Combined directory
     cp ./$free/* ./$Combined
     cp ./$proAntigen/* ./$Combined
     cp ./$npAntigen/* ./$Combined
 
-    cd $free
-    perl $bin/getRedundantClustersAntibody.pl
-    echo "Calculating Redundant Clusters for $free";
-    mv *.txt ../$Redundant
-    cd ..
-
-    cd $npAntigen
-    perl $bin/getRedundantClustersAntibody.pl
-    echo "Calculating Redundant Clusters for $npAntigen";
-    mv *.txt ../$Redundant
-    cd ..
-
-    cd $proAntigen
-    perl $bin/getRedundantClustersAntibody.pl
-    echo "Calculating Redundant Clusters for $proAntigen";
-    mv *.txt ../$Redundant
-    cd ..
-
-    cd $Combined
-    perl $bin/getRedundantClustersAntibody.pl
-    echo "Calculating Redundant Clusters for $Combined";
-    mv *.txt ../$Redundant
-   
-    cd ..
+    for f in `ls -d $label"_"*`;
+    do
+        cd $f
+        perl $bin/getRedundantClustersAntibody.pl
+        echo "Calculating Redundant Clusters for $free";
+        mv *.txt ../$Redundant
+        cd ..
+     done
 
     makeNRdata $label
     data="Data"
@@ -153,15 +140,19 @@ function runProg
 {
     scheme=$1
     schemeFlag=$2
-    # Running get_antibody_complex program for 3 numbering schemes
-    echo "get_antibody_complex program is running for $scheme numbering";
+    # Running processAntibodyPDBs program for 3 numbering schemes
+    
     free="LH_Free_"$scheme
     proAntigen="LH_Protein_"$scheme
     npAntigen="LH_NonProtein_"$scheme
     Combined="LH_Combined_"$scheme
     label="LH"
-    perl $bin/processAntibodyPDBs.pl $schemeFlag $3
+
+    echo "processAntibodyPDBs program is running for $scheme numbering";
+    perl $bin/processAntibodyPDBs.pl $schemeFlag $3 # $3 is input file
+    
     process $free $proAntigen $npAntigen $Combined $scheme $label
+exit;
     perl $bin/FreeComplexedAntibody.pl -$label ./LH_difference.list ./Redundant_files/"Redundant_"$Combined".txt"
     
     free="L_Free_"$scheme
@@ -190,6 +181,7 @@ cat ./Redundant_files/"Redundant_LH_Combined_"$scheme".txt" ./Redundant_files/"R
 
 ############################################
 echo "Main program running";
+############################################
 
 scheme="Martin"
 schemeFlag="-a"
@@ -197,6 +189,7 @@ runProg $scheme $schemeFlag $1
 mkdir -p $scheme"_logs"
 mv *.list *.dat ./$scheme"_logs"
 
+exit; 
 scheme="Kabat"
 schemeFlag="-k"
 runProg $scheme $schemeFlag $1
@@ -249,3 +242,8 @@ awk 'NR%2{printf $0" ";next;}1' header.dat >headerProcessed.dat
 
 # grep -r "scFV" . | awk -F "/" '{print $2}' > scFv.list
 # grep -r "multi-chain" . | awk -F "/" '{print $2}' | sort | uniq
+
+
+#echo "Moving Data to destination"
+#mv Data $data_dest
+#mv *.tt $data_dest
