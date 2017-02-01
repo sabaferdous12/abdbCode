@@ -36,10 +36,10 @@ my $Usage = <<'EOF';
 
 Usage:
 
-    program_name <scheme name> <scheme flag [-k -c -a]> <input_file>
+    program_name <scheme flag [-k -c -a]> <input_file>
 
 Example:
-    ./processAntibodyPDBs.pl Martin -a <antibodyPDB_code.txt>
+    ./processAntibodyPDBs.pl -a <antibodyPDB_code.txt>
 
 numbering scheme
 
