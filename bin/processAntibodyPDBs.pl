@@ -32,6 +32,29 @@ use antibodyProcessing qw (
                       );
 my ($nsch, $numbering);
 
+my $Usage = <<'EOF';
+
+Usage:
+
+    program_name <scheme name> <scheme flag [-k -c -a]> <input_file>
+
+Example:
+    ./processAntibodyPDBs.pl Martin -a <antibodyPDB_code.txt>
+
+numbering scheme
+
+    k : number the antibodies by Kabat numbering scheme
+    c : number the antibodies by Chothia numbering scheme
+    a : number the antibodies by Martin numbering scheme
+
+EOF
+
+if ( defined ( $::help ) )
+ {
+     print "$Usage\n";
+     exit 0;
+ }
+
 if ( $::k )
 {
      $nsch = '-k';
