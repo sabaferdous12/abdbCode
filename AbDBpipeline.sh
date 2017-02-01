@@ -22,7 +22,7 @@
 #   EMail:      saba@bioinf.org.uk
 #
 #*************************************************************************
-abdb_HOME="/acrm/bsmhome/ucbterd/git/abdbCode"
+. ./abdb.cfg
 lib=$abdb_HOME/lib
 bin=$abdb_HOME/bin
 
