@@ -27,43 +27,6 @@
 lib=$abdb_HOME/lib
 bin=$abdb_HOME/bin
 
-
-function makeNRdata
-{
-    label=$1
-    mkdir -p "NR_"$proAntigen
-    cd $proAntigen  # runs perl program for non-redundant data
-    perl $bin/prepareNRAbData.pl ../$Redundant/"Redundant_"$proAntigen".txt" "NR_"$proAntigen
-    echo "Preparing Non-Redundant Data";
-    cd ..
-    `ls "NR_"$proAntigen/*.pdb | grep "_" | cut -f1 -d. | awk -F "/" '{print \$2}' >"NR_"$label"_Merged.txt"` 
-    
-    mkdir -p "NR_"$free
-    cd $free
-    perl $bin/prepareNRAbData.pl ../$Redundant/"Redundant_"$free".txt" "NR_"$free
-    echo "Preparing Non-Redundant Data";
-    cd ..
-    `ls "NR_"$free/*.pdb | grep "_" | cut -f1 -d. | awk -F "/" '{print \$2}' >>"NR_"$label"_Merged.txt"`
-    
-    mkdir -p "NR_"$npAntigen
-    cd $npAntigen
-    perl $bin/prepareNRAbData.pl ../$Redundant/"Redundant_"$npAntigen".txt" "NR_"$npAntigen
-    echo "Preparing Non-Redundant Data";
-    cd ..
-    `ls "NR_"$npAntigen/*.pdb | grep "_" | cut -f1 -d. | awk -F "/" '{print \$2}' >>"NR_"$label"_Merged.txt"`
-    
-    mkdir -p "NR_"$Combined
-    cd $Combined
-    perl $bin/prepareNRAbData.pl ../$Redundant/"Redundant_"$Combined.txt "NR_"$Combined
-    echo "Preparing Non-Redundant Data";
-    cd ..
-    `ls "NR_"$Combined/*.pdb | grep "_" | cut -f1 -d. | awk -F "/" '{print \$2}' >"NR_"$label"_Combined.txt"`
-
-
-    # This shell command finds diffrence between Combined.txt and Merged.txt
-    `comm -13 <(sort NR_"$label"_Combined.txt) <(sort NR_"$label"_Merged.txt) >$label"_difference.list"`
-}
-
 function process
 {
      # parameter
@@ -74,6 +37,9 @@ function process
     scheme=$5
     label=$6
 
+    data="Data"
+    mkdir -p $data
+        
     Redundant="Redundant_files"
     mkdir -p $Combined
     mkdir -p $Redundant
@@ -83,19 +49,30 @@ function process
     cp ./$proAntigen/* ./$Combined
     cp ./$npAntigen/* ./$Combined
 
+    # Preparing redundant clusters for all 4 datasets
     for f in `ls -d $label"_"*`;
     do
         cd $f
-        perl $bin/getRedundantClustersAntibody.pl
         echo "Calculating Redundant Clusters for $free";
+        perl $bin/getRedundantClustersAntibody.pl
         mv *.txt ../$Redundant
+
+        # Preparaing non-redundant data for each dataset
+        mkdir -p "NR_"$f
+        echo "Preparing Non-Redundant Data";
+        perl $bin/prepareNRAbData.pl ../$Redundant/"Redundant_"$f".txt" "NR_"$f
+        if [ $f = $Combined ] ; then
+            `ls "NR_"$f/*.pdb | grep "_" | cut -f1 -d. | awk -F "/" '{print \$2}' >../"NR_"$label"_Combined.txt"`
+        else    
+        `ls "NR_"$f/*.pdb | grep "_" | cut -f1 -d. | awk -F "/" '{print \$2}' >>../"NR_"$label"_Merged.txt"`
+        fi
+        mv "NR_"$f ../
         cd ..
      done
 
-    makeNRdata $label
-    data="Data"
+    # This shell command finds diffrence between Combined.txt and Merged.txt 
+    `comm -13 <(sort NR_"$label"_Combined.txt) <(sort NR_"$label"_Merged.txt) >$label"_difference.list"`
 
-    mkdir -p $data
     mv $free ./$data
     mv $proAntigen ./$data
     mv $npAntigen ./$data
@@ -112,16 +89,12 @@ function process
 function combineData
 {
     scheme=$1;
-    Redundant="Redundant_files"
     
     mkdir -p "ALL_"$scheme
     cp ./"LH_Combined_"$scheme/* ./ALL_$scheme
     cp ./"L_Combined_"$scheme/* ./ALL_$scheme
     cp ./"H_Combined_"$scheme/* ./ALL_$scheme
     cd "ALL_"$scheme
-#    perl ~/allscript/bin/getRedundantClustersAntibody.pl
-    
-#    mv *.txt ../../$Redundant
     cd ..
 }
 
@@ -152,9 +125,8 @@ function runProg
     perl $bin/processAntibodyPDBs.pl $schemeFlag $3 # $3 is input file
     
     process $free $proAntigen $npAntigen $Combined $scheme $label
-exit;
     perl $bin/FreeComplexedAntibody.pl -$label ./LH_difference.list ./Redundant_files/"Redundant_"$Combined".txt"
-    
+exit;    
     free="L_Free_"$scheme
     proAntigen="L_Protein_"$scheme
     npAntigen="L_NonProtein_"$scheme
