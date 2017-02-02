@@ -1,0 +1,13 @@
+1. To run AbDB pipeline
+
+~/git/abdbCode/AbDBpipeline.sh SACsList.txt
+
+You need to have 2 files in current directory (From where you are calling the script)
+
+1. Text file with list of PDB codes (SACsList.txt)
+2. config file (abdb.cfg)
+
+The config file 
+1. set abdb_HOME="/acrm/bsmhome/ucbterd/git/abdbCode" or Location of source code.
+2. set dataprep_dest="/var/tmp" or where you want to move raw data
+3. set webdata_dest="var/tmp/AbDb_WebData" or where you want to move processed data for website
