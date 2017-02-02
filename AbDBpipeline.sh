@@ -78,10 +78,10 @@ function process
     mv $npAntigen ./$data
     mv $Combined ./$data
     mv "NR_"* ./$data
-    cd $data
+    #cd $data
 
-    combineData $scheme
-    cd ..
+    #combineData $scheme
+    #cd ..
     } # Function ends
 ##############################
 # This function puts together all the data (Complete Antibody, Light and
@@ -126,12 +126,13 @@ function runProg
     
     process $free $proAntigen $npAntigen $Combined $scheme $label
     perl $bin/FreeComplexedAntibody.pl -$label ./LH_difference.list ./Redundant_files/"Redundant_"$Combined".txt"
-exit;    
+
     free="L_Free_"$scheme
     proAntigen="L_Protein_"$scheme
     npAntigen="L_NonProtein_"$scheme
     Combined="L_Combined_"$scheme
     label="L"
+
     process $free $proAntigen $npAntigen $Combined $scheme $label
     perl $bin/FreeComplexedAntibody.pl -$label ./L_difference.list ./Redundant_files/"Redundant_"$Combined".txt"
 
@@ -142,12 +143,15 @@ exit;
     label="H"
     process $free $proAntigen $npAntigen $Combined $scheme $label
     perl $bin/FreeComplexedAntibody.pl -$label ./H_difference.list ./Redundant_files/"Redundant_"$Combined".txt"
-    # Combine the LH,L and H combined redundant clusters in to Redundant_ALL file
+
+# Combine the LH,L and H combined redundant clusters in to Redundant_ALL file
 cat ./Redundant_files/"Redundant_LH_Combined_"$scheme".txt" ./Redundant_files/"Redundant_L_Combined_"$scheme".txt" ./Redundant_files/"Redundant_H_Combined_"$scheme".txt" >./Redundant_files/"Redundant_ALL_"$scheme".txt"
-    }
 
-
-
+# Combining data from LH, L and H datasets into ALL_scheme directory
+cd Data
+combineData $scheme
+cd ..
+}
 
 
 
@@ -161,7 +165,7 @@ runProg $scheme $schemeFlag $1
 mkdir -p $scheme"_logs"
 mv *.list *.dat ./$scheme"_logs"
 
-exit; 
+
 scheme="Kabat"
 schemeFlag="-k"
 runProg $scheme $schemeFlag $1
@@ -177,6 +181,7 @@ mv *.list *.dat ./$scheme"_logs"
 
 mv Redundant_files Data
 cd Data/Redundant_files
+
 # To sort all the files in directory
 shopt -s nullglob
 filearray=( * ) # Reading directory files into an array
@@ -185,7 +190,6 @@ filearray=( * ) # Reading directory files into an array
      sort $i -o $i
  done
 cd ..
-#mv *.txt ../$log
 
 # Stats for processed data
 perl $bin/getprocessedDataStats.pl
@@ -211,11 +215,19 @@ bash $bin/statsUnprocessed.sh $Fc $realKabatError $superceded $scFV >../stats_un
 
 # To merge 2 consective lines into one
 awk 'NR%2{printf $0" ";next;}1' header.dat >headerProcessed.dat
+cd ..
 
-# grep -r "scFV" . | awk -F "/" '{print $2}' > scFv.list
-# grep -r "multi-chain" . | awk -F "/" '{print $2}' | sort | uniq
+data="Data"
+mv Martin_logs $data
+datasrc=`pwd`
+echo "Moving Data to destination"
+cd $dataprep_dest
 
+# Move processed data (Data) into Web directory
+mv $datasrc/$data/ $webdata_dest
+mv $datasrc/*.tt $webdata_dest
 
-#echo "Moving Data to destination"
-#mv Data $data_dest
-#mv *.tt $data_dest
+# Make dir with date of the day
+mkdir -p $(date '+%d-%b-%Y') && dateDir=$(date '+%d-%b-%Y')
+# Move data prep folders in date directory
+mv `ls -d $datasrc/*/` $dataprep_dest/$dateDir
