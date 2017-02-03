@@ -45,14 +45,44 @@ sub processAntibody
     print {$LOG} "Antibody chain IDs, chain Labels and chain sequences: \n";
     print {$LOG} Dumper ($chainIdChainTpye_HRef);
     
+    splitPdb2Chains($pdbPath);
+
+        print {$LOG} "The $pdbId PDB has been splitted in to different files".
+            " based on number of chains\n";
     
     my %chainType = %{$chainType_HRef};
-    my $count = 1;        
-    splitPdb2Chains($pdbPath);
-    print {$LOG} "The $pdbId PDB has been splitted in to different files".
-        " based on number of chains\n";
+    my $count = 1;
+
+    # Obtaining only light and heavy chains labels from %chainType to number chains separately
+     my @lChains=@{$chainType{'Light'}};
+    my @hChains=@{$chainType{'Heavy'}};
+        my @lhHybridChains=@{$chainType{'Light/Heavy'}};
+    my @hlHybridChains=@{$chainType{'Heavy/Light'}};
+
+    my @lhChains = (@lChains, @hChains, @lhHybridChains, @hlHybridChains);
+    print {$LOG} "Light and heavy chains are @lhChains\n";
+    #***
+
+    eval { antibodyNumbering ( \@lhChains, $nsch );
+           1;
+       };
     
-        my ($heavyLightPairContact_HRef, $agContacts_HRef, $antigen_ARef) =
+
+    if ( $@ ) {
+        print {$LOG} "Kabat Numbering Failed for $pdbId\n" .
+            $@ . "Program exited\n\n";
+        $numberingError = 1;
+        return $numberingError;
+        next;
+    }
+    else {
+        print {$LOG} "All the antibodies in $pdbId has been numbered by".
+            " antibody numbering program\n";
+    }
+   
+    #exit;
+    
+    my ($heavyLightPairContact_HRef, $agContacts_HRef, $antigen_ARef) =
     pairHeavyLightChains ($pdbPath, $chainType_HRef, $chainIdChainTpye_HRef,
                           $LOG);
     my @antibodyPairs = keys % {$heavyLightPairContact_HRef};
@@ -69,24 +99,7 @@ sub processAntibody
     print {$LOG} "Each of the antibody in the PDB has been assembled with".
         " light and heavy chain in one file\n";
     
-    
-    eval { antibodyNumbering ( \@antibodyPairs, $nsch );
-           1;
-       };
 
-
-    if ( $@ ) {
-        print {$LOG} "Kabat Numbering Failed for $pdbId\n" .
-            $@ . "Program exited\n\n";
-        $numberingError = 1;
-        return $numberingError;
-        next;
-    }
-    else {
-        print {$LOG} "All the antibodies in $pdbId has been numbered by".
-            " antibody numbering program\n";
-    }
-    
     my $hapten = hasHapten ($pdbPath, \@antibodyPairs);
     my $fileType;
     my %fileType;
@@ -654,14 +667,14 @@ sub antibodyAssembly
 
 sub antibodyNumbering
 {
-    my ( $antibodyPairs, $nsch ) = @_;
+    my ( $antibodyChains, $nsch ) = @_;
     my ( $out, $error, $numberedPDB );
          
-    foreach my $pair( @$antibodyPairs )
+    foreach my $c( @$antibodyChains )
     {
-        my $antibody = $pair.".pdb";
+        my $antibody = $c.".pdb";
         my $kabatnum = $config::kabatnum;
-        $numberedPDB = $pair."_num.pdb";
+        $numberedPDB = $c."_num.pdb";
 
         # Capturing error from Stderr
         # In case of error (kabat program failure), output file ($numbered_pdb)

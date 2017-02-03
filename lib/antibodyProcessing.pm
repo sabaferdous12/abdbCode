@@ -331,7 +331,10 @@ sub extractCDRsAndFrameWorks
     
     foreach my $pair ( @$antibodyPairs )
     {
+        my ($l, $h) = split ("", $pair);
+        
         my $numberedAntibody = $pair."_num.pdb";
+        `cat $l"_num.pdb" $h"_num.pdb" >$numberedAntibody`; 
         my $getpdb= $config::getpdb;
         my $CDRsPDB = $pair."_CDR.pdb";
         my $FWsPDB = $pair."_FW.pdb";
