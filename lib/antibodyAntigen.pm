@@ -18,6 +18,7 @@ use antibodyProcessing qw (
 	checkAntigenChains
         mapChainsIDs
         printHeader
+        mergeLH
                       );
 use Exporter qw (import);
 our @EXPORT_OK = qw (
@@ -155,6 +156,7 @@ sub processAntibody
 }
 
 
+
 sub makeFreeAntibodyComplex
 {
     my ($pdbId, $pdbPath, $antibodyPair_ARef, $count, $fileType,
@@ -166,18 +168,7 @@ sub makeFreeAntibodyComplex
     
     foreach my $antibodyPair (@antibodyPairs)
     {
-        my $numberedAntibody;
-        
-        my ($l, $h) = split ("", $antibodyPair);
-        if ( ($l) and ($h)) {
-            $numberedAntibody = $antibodyPair."_num.pdb";
-            `cat $l"_num.pdb" $h"_num.pdb" >$numberedAntibody`;
-        }
-        else {
-            $numberedAntibody = $antibodyPair."_num.pdb";
-        }
-
-                         
+        mergeLH($antibodyPair);                 
         
         if ( %fileTypeH ) {
             $fileType = $fileTypeH{$antibodyPair};
@@ -229,7 +220,8 @@ sub processAntibodyAntigen
     my @antibodyPairs = @{$antibodyPairs_ARef};
 
     my $cdrError = 0;    
-
+    
+    
     eval { extractCDRsAndFrameWorks ( \@antibodyPairs, $ab );
            1;
        };
@@ -245,7 +237,8 @@ sub processAntibodyAntigen
         print {$LOG} "CDRs and FWs have been extracted from antibody for ".
             "contact analysis\n";
     }
-
+    
+    
     my @antigenChains = @{$antigenIds_ARef};
     my %antibodyAntigenContacts =
         assembleCDRsAndFWsWithAntigen(\@antibodyPairs, \@antigenChains);

@@ -45,6 +45,10 @@ sub processSingleChainAntibody
 
     my %chainType = %{$chainType_HRef};
     my $count = 1;
+
+    
+
+
     splitPdb2Chains($pdbPath);
     print {$LOG} "The $pdbId PDB has been splitted in to different files".
         " based on number of chains\n";
