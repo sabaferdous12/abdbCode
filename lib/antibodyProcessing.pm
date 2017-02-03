@@ -31,6 +31,7 @@ our @EXPORT_OK = qw (
                         printHeader
                         getProcessedABchains
                         getResolInfo
+                        mergeLH
                 );
 # ************* getPDBPath *****************
 # Description: For given pdb it return local pdb file path
@@ -332,22 +333,24 @@ sub extractCDRsAndFrameWorks
     
     foreach my $pair ( @$antibodyPairs )
     {
-        my ($l, $h) = split ("", $pair);
-        if ( ( $l) and ($h)) {
-            $numberedAntibody = $pair."_num.pdb";
-            `cat $l"_num.pdb" $h"_num.pdb" >$numberedAntibody`;
-        }
+                
+        if  ($ab eq "LH")
+            {
+                $numberedAntibody = mergeLH($pair);
+            }
         else {
-            $numberedAntibody = $pair."_num.pdb";
+            
+           $numberedAntibody = $pair."_num.pdb"; 
         }
         my $getpdb= $config::getpdb;
         my $CDRsPDB = $pair."_CDR.pdb";
         my $FWsPDB = $pair."_FW.pdb";
-        
+         
         my @numbering;
         
         if ( $ab eq "LH")
         {
+            
             @numbering =  (["L24", "L34"], ["L50", "L56"], ["L89", "L97"],
                            ["H31", "H35"], ["H50", "H65"], ["H95", "H102"] );
                     # Extract Frame works
@@ -361,7 +364,7 @@ $getpdb -v H95 H102 >>$FWsPDB`;
         
         elsif ( $ab eq "L")
         {
-            @numbering =  (["L24", "L34"], ["L50", "L56"], ["L89", "L97"]);
+             @numbering =  (["L24", "L34"], ["L50", "L56"], ["L89", "L97"]);
             `$getpdb -v L24 L34 $numberedAntibody |
 $getpdb -v L50 L56 |
 $getpdb -v L89 L97 >>$FWsPDB`;
@@ -570,6 +573,8 @@ sub processHapten
     
     foreach  my $antibodyPair (@antibodyPairs)
     {
+        mergeLH($antibodyPair);
+
         @hapMole = ();
         @hapInter = ();
         my @haptens;
@@ -604,15 +609,16 @@ sub processHapten
         @hapMole = uniq (@hapMole);
         @hapInter = uniq (@hapInter);
         
-#        print "Test: @hapMole:   @hapInter\n";
+        #print "Test: @hapMole:   @hapInter\n";
         
         my $antibodyFile = $antibodyPair."_num.pdb";
         my $outputFile_temp = $antibodyPair."_hap_temp.pdb";
         my $outputFile = $antibodyPair."_hap.pdb";
         open (my $OUT, '>', $outputFile);
-
+                
         # Writing all HETATM records to antibody file
-        `pdbaddhet $pdbPath $antibodyFile $outputFile_temp`;
+         `pdbaddhet $pdbPath $antibodyFile $outputFile_temp`;
+
         # Parsing HETATMs for only identified haptens and discarding the rest
         open (my $IN, '<', $outputFile_temp);
         my @HET = <$IN>;
@@ -988,3 +994,26 @@ sub getProcessedABchains
 }
 
 #  LocalWords:  pdbPath
+
+sub mergeLH
+    {
+        my ($antibodyPair) = @_;
+
+        my $numberedAntibody;
+
+
+        my ($l, $h) = split ("", $antibodyPair);
+
+        if ( ($l) and ($h)) {
+                    $numberedAntibody = $antibodyPair."_num.pdb";
+                    `cat $l"_num.pdb" $h"_num.pdb" >$numberedAntibody`;
+                }
+        else {
+            
+            $numberedAntibody = $antibodyPair."_num.pdb";
+        }
+        return $numberedAntibody;
+        
+    }
+
+             
