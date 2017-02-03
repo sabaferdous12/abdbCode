@@ -166,6 +166,19 @@ sub makeFreeAntibodyComplex
     
     foreach my $antibodyPair (@antibodyPairs)
     {
+        my $numberedAntibody;
+        
+        my ($l, $h) = split ("", $antibodyPair);
+        if ( ($l) and ($h)) {
+            $numberedAntibody = $antibodyPair."_num.pdb";
+            `cat $l"_num.pdb" $h"_num.pdb" >$numberedAntibody`;
+        }
+        else {
+            $numberedAntibody = $antibodyPair."_num.pdb";
+        }
+
+                         
+        
         if ( %fileTypeH ) {
             $fileType = $fileTypeH{$antibodyPair};
         }
