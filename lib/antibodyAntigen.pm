@@ -36,7 +36,7 @@ sub processAntibody
     my $destPro = "$masterDir"."/".$ab."_Protein_".$numbering;
     my $destNonPro = "$masterDir"."/".$ab."_NonProtein_".$numbering;
     my $destFreeAb = "$masterDir"."/".$ab."_Free_".$numbering;
-    my $numberingError = 0;  
+    #my $numberingError = 0;  
     my ($chainType_HRef, $chainIdChainTpye_HRef) =
         getChainTypeWithChainIDs ($pdbPath);
    
@@ -65,26 +65,9 @@ sub processAntibody
     #***
 
 
-    antibodyNumbering ( \@lhChains, $nsch );
-    
-#    eval { antibodyNumbering ( \@lhChains, $nsch );
- #          1;
- #      };
+     my $numError = antibodyNumbering ( \@lhChains, $nsch );
     
 
-#    if ( $@ ) {
- #       print {$LOG} "Kabat Numbering Failed for $pdbId\n" .
-  #          $@ . "Program exited\n\n";
-   #     $numberingError = 1;
-    #    return $numberingError;
-     #   next;
-    #}
-    #else {
-     #   print {$LOG} "All the antibodies in $pdbId has been numbered by".
-      #      " antibody numbering program\n";
-    #}
-   
-    #exit;
     
     my ($heavyLightPairContact_HRef, $agContacts_HRef, $antigen_ARef) =
     pairHeavyLightChains ($pdbPath, $chainType_HRef, $chainIdChainTpye_HRef,
@@ -98,37 +81,39 @@ sub processAntibody
     print {$LOG} join ("\n", @antigens ), "\n";
     
     #****
-
-    antibodyAssembly ( @antibodyPairs );
-    print {$LOG} "Each of the antibody in the PDB has been assembled with".
-        " light and heavy chain in one file\n";
+    # merge each antibody pair
+    my $pairCount= scalar (@antibodyPairs);
+    my $countFailedPair = mergeLH( $LOG, @antibodyPairs);
     
-    
+    my $numberingError=0;
 
+    if ( ($numError) and ($countFailedPair >= $pairCount)) {
+        $numberingError = 1;
+    }
+    
     my $hapten = hasHapten ($pdbPath, \@antibodyPairs);
     my $fileType;
     my %fileType;
     
+    my$cdrError=0;
     
         
     # Checks for haptens and move them to non-Protein data
     if ( ( $hapten) and (!@antigens) )
     {
 #        $fileType = "hap";
-        %fileType = processHapten($pdbPath, \@antibodyPairs, $ab);
+        %fileType = processHapten($pdbPath, \@antibodyPairs, $ab, $LOG);
         makeFreeAntibodyComplex($pdbId, $pdbPath, \@antibodyPairs, $count,
                                 $fileType, $dir, $chainIdChainTpye_HRef, $numbering,
-                                $LOG, $destNonPro, $destFreeAb, %fileType);
-       # movePDBs ($dir, $destNonPro, $pdbId);
-       # print {$LOG} "This antibody is bound with hapten -- Moved to non- ".
-        #    "protein data antigen data\n";
+                                $LOG, $destNonPro, $destFreeAb, $ab, %fileType);
+     
     }
     # Checks for protein antigens (Further checking is within
     # processAntibodyAntigen subroutine)
     elsif ( ( @antigens) and (!$hapten) )
     {
         $fileType = "num";
-        $numberingError =
+        $cdrError =
             processAntibodyAntigen($pdbId, $pdbPath, $ab, $antigen_ARef,
                                \@antibodyPairs, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
@@ -138,8 +123,8 @@ sub processAntibody
     elsif ( ( @antigens) and ($hapten))
     {
 #        $fileType = "hap";
-        my %fileType = processHapten($pdbPath, \@antibodyPairs, $ab);
-        $numberingError =
+        my %fileType = processHapten($pdbPath, \@antibodyPairs, $ab, $LOG);
+        $cdrError =
             processAntibodyAntigen($pdbId, $pdbPath, $ab, $antigen_ARef,
                                \@antibodyPairs, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
@@ -152,7 +137,7 @@ sub processAntibody
         $fileType = "num";
         makeFreeAntibodyComplex($pdbId, $pdbPath, \@antibodyPairs, $count,
                                 $fileType, $dir, $chainIdChainTpye_HRef, $numbering,
-                                $LOG, $destNonPro, $destFreeAb, %fileType);
+                                $LOG, $destNonPro, $destFreeAb, $ab, %fileType);
 
     }
     return $numberingError;
@@ -165,14 +150,15 @@ sub makeFreeAntibodyComplex
 {
     my ($pdbId, $pdbPath, $antibodyPair_ARef, $count, $fileType,
         $dir, $chainIdChainTpye_HRef, $numbering, $LOG,
-        $destNonPro, $destFreeAb, %fileTypeH) = @_;
+        $destNonPro, $destFreeAb, $ab, %fileTypeH) = @_;
     my @antibodyPairs = @ {$antibodyPair_ARef};
         
     my ($lookForFile, $newFile);
     
     foreach my $antibodyPair (@antibodyPairs)
     {
-        mergeLH($antibodyPair);                 
+        
+#        mergeLH($antibodyPair, $LOG);                 
         
         if ( %fileTypeH ) {
             $fileType = $fileTypeH{$antibodyPair};
@@ -182,22 +168,15 @@ sub makeFreeAntibodyComplex
             $fileType = "num";
         }
         $lookForFile = $antibodyPair."_".$fileType.".pdb";
-        $newFile = $pdbId."_".$count.".pdb";
-
+ #       $newFile = $pdbId."_".$count.".pdb";
+        
         my $numLines =`cat $lookForFile | wc -l`;
 
-        # To check if there is one chain in the $antibodyPair.pdb 
-            if ($numLines < 900){
-                # Another check to confirm if kabat numbering has failed
-                my $errorCheck=`grep "pdbpatchnumbering" numberingFailedChain.dat`;
-                if ( $errorCheck) {
+#        # To check if there is one chain in the $antibodyPair.pdb 
 
-                    print {$LOG} "Kabatnum Error-Numbering failed on this pair:$antibodyPair\n";
-                }
-            }
-        
-           else {
-            
+        if ( ($numLines > 1000) and ($ab eq "LH") ){
+                        
+            $newFile = $pdbId."_".$count.".pdb";
             open (my $ABFILE, '>>',  "$dir/$newFile");
             my %mapedChains = mapChainsIDs ($antibodyPair,$chainIdChainTpye_HRef);
             printHeader($ABFILE, $numbering, $pdbPath, %mapedChains);
@@ -211,22 +190,58 @@ sub makeFreeAntibodyComplex
                 }
         
             $count++;
-        }
         
+            if ( $fileType eq "hap") {
+                movePDBs ($dir, $destNonPro, $pdbId);
+                print {$LOG} "This antibody is bound with hapten -- Moved to non- ".
+                    "protein data antigen data\n";
+            }
+            else {
+                movePDBs ($dir, $destFreeAb, $pdbId);
+                print {$LOG} "This antibody is Free -- Moved to Free ".
+                    "antibody data\n";
+            }
+            
+        } # if numLines
 
-        if ( $fileType eq "hap") {
-            movePDBs ($dir, $destNonPro, $pdbId);
-            print {$LOG} "This antibody is bound with hapten -- Moved to non- ".
-                "protein data antigen data\n";
-        }
-        else {
-            movePDBs ($dir, $destFreeAb, $pdbId);
-            print {$LOG} "This antibody is Free -- Moved to Free ".
-                "antibody data\n";
+        elsif ( ( ($ab eq "L") or ($ab eq "H") ) and ($numLines > 700) ) 
+            {
+                $newFile = $pdbId."_".$count.".pdb";    
+                open (my $ABFILE, '>>',  "$dir/$newFile");
+                my %mapedChains = mapChainsIDs ($antibodyPair,$chainIdChainTpye_HRef);
+                printHeader($ABFILE, $numbering, $pdbPath, %mapedChains);
+                        
+            open (my $AB, '<', "$dir/$lookForFile") or die "Can't open File\n";
+            while (!eof ($AB))
+                {
+                    my $freeAB = <$AB>;
+                    next if ($freeAB =~ /^MASTER|^END/);
+                    print {$ABFILE} $freeAB;
+                }
+        
+            $count++;
+        
+            if ( $fileType eq "hap") {
+                movePDBs ($dir, $destNonPro, $pdbId);
+                print {$LOG} "This antibody is bound with hapten -- Moved to non- ".
+                    "protein data antigen data\n";
+            }
+            else {
+                movePDBs ($dir, $destFreeAb, $pdbId);
+                print {$LOG} "This antibody is Free -- Moved to Free ".
+                    "antibody data\n";
+            }
 
-                    
-        }
-    }
+
+                
+            }# elsif
+        
+        
+        
+                
+    }# $antibody pair
+    
+    
     return $count;
 }
   
@@ -239,27 +254,29 @@ sub processAntibodyAntigen
 
     my $cdrError = 0;    
     
+    my @failedNumPair = extractCDRsAndFrameWorks ( \@antibodyPairs, $ab, $LOG );
+   # print "FFFF: @failedNumPair \n";
     
-    eval { extractCDRsAndFrameWorks ( \@antibodyPairs, $ab );
-           1;
-       };
+    #eval { extractCDRsAndFrameWorks ( \@antibodyPairs, $ab, $LOG );
+     #      1;
+      # };
     
-    if ( $@ ) {
-        print {$LOG} "CDR-Error: Can'nt extract CDRs for: $pdbId\n" . $@ .
-            "Program exited\n\n";
-        $cdrError = 1;
-        return  $cdrError; 
-        next;
-    }
-    else {
-        print {$LOG} "CDRs and FWs have been extracted from antibody for ".
-            "contact analysis\n";
-    }
+    #if ( $@ ) {
+     #   print {$LOG} "CDR-Error: Can'nt extract CDRs for: $pdbId\n" . $@ .
+      #      "Program exited\n\n";
+       # $cdrError = 1;
+       # return  $cdrError; 
+        #next;
+   # }
+    #else {
+     #   print {$LOG} "CDRs and FWs have been extracted from antibody for ".
+      #      "contact analysis\n";
+    #}
     
     
     my @antigenChains = @{$antigenIds_ARef};
     my %antibodyAntigenContacts =
-        assembleCDRsAndFWsWithAntigen(\@antibodyPairs, \@antigenChains);
+        assembleCDRsAndFWsWithAntigen(\@antibodyPairs, \@antigenChains, \@failedNumPair);
     print {$LOG} "Antibody-Antigen contacts: \n";
     print {$LOG} Dumper (\%antibodyAntigenContacts);
     
@@ -271,7 +288,7 @@ sub processAntibodyAntigen
                                                $dir, $masterDir, $LOG,
                                                $chainIdChainTpye_HRef,
                                                $destPro, $destNonPro, $destFreeAb,
-                                               $numbering, \%complexInfo, \%fileType);
+                                               $numbering, \%complexInfo, \%fileType, $ab);
     return  $cdrError;
     
 }
@@ -281,7 +298,7 @@ sub makeAntibodyAntigenComplex
     {
     my ( $pdbId, $pdbPath,$fileType, $dir, $masterDir, $LOG,
          $chainIdChainTpye_HRef, $destPro, $destNonPro, $destFreeAb,
-         $numbering, $complexInfo_HRef, $fileType_HRef) = @_;
+         $numbering, $complexInfo_HRef, $fileType_HRef, $ab) = @_;
     #my $dir = '.';
     my $count = 1;
     my $biAntigen = 0;
@@ -299,11 +316,9 @@ sub makeAntibodyAntigenComplex
         $count = makeFreeAntibodyComplex($pdbId, $pdbPath,
                                          \@Freeantibodychains, $count,
                                          $fileType, $dir, $chainIdChainTpye_HRef,
-                                         $numbering, $LOG, $destNonPro, $destFreeAb,
+                                         $numbering, $LOG, $destNonPro, $destFreeAb, $ab,
                                          %fileTypeH);
-        #movePDBs ($dir, $destFreeAb, $pdbId);
-        #print {$LOG} "The $pdbId has free antibody (in addition to antibody-".
-         #   "antigen complex)/non-antigen protein - Moved to Free antibody data\n";
+    
     }
     
     my @antigen;
@@ -335,7 +350,9 @@ sub makeAntibodyAntigenComplex
             $antigenRef = $complexInfo{$ab_pair};
             @antigen = @{$antigenRef};
         }
-
+        my $numLines =`cat $numberedAntibody | wc -l`;
+        if ( $numLines > 900)
+        {
         open ( my $AB_FILE, '<', "$dir/$numberedAntibody" ) or
             die "Could not open file $numberedAntibody";
         
@@ -389,6 +406,9 @@ sub makeAntibodyAntigenComplex
             
         $count++;    
     }
+
+    }
+    
     
     if ( (scalar @antigen) >= 2 )
     {
@@ -695,7 +715,7 @@ sub antibodyNumbering
     my ( $antibodyChains, $nsch ) = @_;
     my ( $out, $error, $numberedPDB );
     open (my $OUT, '>', "numberingFailedChain.dat");
-    
+    my $fail;    
     foreach my $c( @$antibodyChains )
     {
         my $antibody = $c.".pdb";
@@ -705,16 +725,19 @@ sub antibodyNumbering
         # Capturing error from Stderr
         # In case of error (kabat program failure), output file ($numbered_pdb)
         # would be empty
-        
+               
         ($out, $error) = qxx ( "$kabatnum $nsch $antibody $numberedPDB" );
 
         if ( -z $numberedPDB )
             { # Checks if file is empty
                 print {$OUT} "$numberedPDB failed to number\n";
                 print {$OUT} "$error\n";
+                $fail = 1;
+                
                 #croak $error;
             }
     }
+    return $fail;
 }
 
 
@@ -737,7 +760,7 @@ sub antibodyNumbering
 # Author: Saba
 sub assembleCDRsAndFWsWithAntigen
 {
-    my ( $antibodyPairs, $antigenChains ) = @_;
+    my ( $antibodyPairs, $antigenChains, $failedNumPair) = @_;
     my $dir = '.';
     my ($AG_FILE, $CDR_FILE, $AG_CDR_FILE, $cdr_ag_conts );
     my ($FW_FILE, $AG_FW_FILE, $fw_ag_conts);
@@ -748,6 +771,10 @@ sub assembleCDRsAndFWsWithAntigen
     
     foreach my $antibody ( @$antibodyPairs )
     {
+
+        if ( $antibody ~~ @{$failedNumPair}) {
+            next;
+        }
         my $cdrs = $antibody."_CDR.pdb";
         my $fw = $antibody."_FW.pdb";
         
