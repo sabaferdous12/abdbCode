@@ -32,6 +32,7 @@ our @EXPORT_OK = qw (
                         getProcessedABchains
                         getResolInfo
                         mergeLH
+                        dealNumError
                 );
 # ************* getPDBPath *****************
 # Description: For given pdb it return local pdb file path
@@ -327,21 +328,15 @@ sub largestValueInHash
 
 sub extractCDRsAndFrameWorks
 {
-    my ( $antibodyPairs, $ab) = @_;
+    my ( $antibodyPairs, $ab, $LOG) = @_;
     my ( $out, $error, $success, $CDR );
     my $numberedAntibody;
-    
+    my @numFailedPair;    
     foreach my $pair ( @$antibodyPairs )
     {
-                
-        if  ($ab eq "LH")
-            {
-                $numberedAntibody = mergeLH($pair);
-            }
-        else {
-            
-           $numberedAntibody = $pair."_num.pdb"; 
-        }
+       $numberedAntibody = $pair."_num.pdb";         
+       my $numLines =`cat $numberedAntibody | wc -l`;
+       
         my $getpdb= $config::getpdb;
         my $CDRsPDB = $pair."_CDR.pdb";
         my $FWsPDB = $pair."_FW.pdb";
@@ -350,33 +345,59 @@ sub extractCDRsAndFrameWorks
         
         if ( $ab eq "LH")
         {
-            
-            @numbering =  (["L24", "L34"], ["L50", "L56"], ["L89", "L97"],
-                           ["H31", "H35"], ["H50", "H65"], ["H95", "H102"] );
-                    # Extract Frame works
-`$getpdb -v L24 L34 $numberedAntibody |
+            if ( $numLines < 900) {
+                print {$LOG} "One of the chain is missing: FWs'/CDRs' can not extracted\n";
+                push (@numFailedPair, $pair);
+                next; 
+            }
+
+            else {
+                
+                @numbering =  (["L24", "L34"], ["L50", "L56"], ["L89", "L97"],
+                               ["H31", "H35"], ["H50", "H65"], ["H95", "H102"] );
+                # Extract Frame works
+                `$getpdb -v L24 L34 $numberedAntibody |
 $getpdb -v L50 L56 |
 $getpdb -v L89 L97 |
 $getpdb -v H31 H35 |
 $getpdb -v H50 H65 |
 $getpdb -v H95 H102 >>$FWsPDB`;
+            }
         }
+       
         
         elsif ( $ab eq "L")
         {
-             @numbering =  (["L24", "L34"], ["L50", "L56"], ["L89", "L97"]);
-            `$getpdb -v L24 L34 $numberedAntibody |
+            if ( $numLines < 500) {
+                print {$LOG} "One of the chain is missing: FW'/CDRs' can not extracted\n";
+                push (@numFailedPair, $pair);
+                next;
+            }
+            else
+                {
+                    @numbering =  (["L24", "L34"], ["L50", "L56"], ["L89", "L97"]);
+                    `$getpdb -v L24 L34 $numberedAntibody |
 $getpdb -v L50 L56 |
 $getpdb -v L89 L97 >>$FWsPDB`;
+                }
         }
+       
         
         elsif ( $ab eq "H")
         {
-            @numbering =  (["H31", "H35"], ["H50", "H65"], ["H95", "H102"] );
-            `$getpdb -v H31 H35 $numberedAntibody | 
+            if ( $numLines < 500) {
+                print {$LOG} "One of the chain is missing: FWs'/CDRs' can not extracted\n";
+                push (@numFailedPair, $pair);
+                next;
+            }
+            else {
+                @numbering =  (["H31", "H35"], ["H50", "H65"], ["H95", "H102"] );
+                `$getpdb -v H31 H35 $numberedAntibody | 
 $getpdb -v H50 H65 |
 $getpdb -v H95 H102 >>$FWsPDB`;
+            }
         }
+       
         my $all_error = '';
         # to avoid append and clearing the file contents if already present
         if (-e $CDRsPDB)
@@ -409,6 +430,8 @@ $getpdb -v H95 H102 >>$FWsPDB`;
                 croak $all_error;
             }
     }
+    return @numFailedPair;
+    
 }
 
 
@@ -539,14 +562,17 @@ sub hasHapten
     my ($pdbPath, $antibodyPair_ARef) = @_;
     my $hashapten = $config::hashapten;
     
+    
     my @antibodyPairs = @{$antibodyPair_ARef};
     my ($hapten, @haptens, @allHaptens);
     
     for my $antibody (@antibodyPairs  )
     {
-            my ($L, $H) = split ("", $antibody);
+        
+        my ($L, $H) = split ("", $antibody);
             @haptens = `$hashapten -l $L, -h $H $pdbPath`;
-            push (@allHaptens , @haptens );
+                
+        push (@allHaptens , @haptens );
     }
 
     if (grep (/^HAPTEN/, @allHaptens) )
@@ -563,7 +589,7 @@ sub hasHapten
 
 sub processHapten
 {
-    my ($pdbPath, $antibodyPair_ARef,$ab ) =@_;
+    my ($pdbPath, $antibodyPair_ARef,$ab, $LOG ) =@_;
     my $hashapten = $config::hashapten;
     my $haptenFlag=0;
     my %fileType;
@@ -573,7 +599,8 @@ sub processHapten
     
     foreach  my $antibodyPair (@antibodyPairs)
     {
-        mergeLH($antibodyPair);
+        
+        mergeLH($LOG, @antibodyPairs);
 
         @hapMole = ();
         @hapInter = ();
@@ -617,15 +644,16 @@ sub processHapten
         open (my $OUT, '>', $outputFile);
                 
         # Writing all HETATM records to antibody file
-         `pdbaddhet $pdbPath $antibodyFile $outputFile_temp`;
-
+        if (-z !$antibodyFile) {
+            `pdbaddhet $pdbPath $antibodyFile $outputFile_temp`;
+           }     
         # Parsing HETATMs for only identified haptens and discarding the rest
         open (my $IN, '<', $outputFile_temp);
         my @HET = <$IN>;
-        
+                
         my @atomRec = grep { $_ =~ m/^ATOM|^TER/} @HET;
         print {$OUT} @atomRec;
-
+                
         # Obtaining HETATMS for Haptens
         foreach my $hapMol( @hapMole ) {
             # Obtaining Haptens for multiple resSeq and Chains
@@ -639,21 +667,24 @@ sub processHapten
                                                $_ =~ m/$hapMol $chainId   $resSeq/ |
                                                    $_ =~ m/$hapMol $chainId$resSeq/ } @HET;
                 # This check is to eliminate any small solvent molecule like: SO4, PO4
-
+                                
                 if ( scalar @hapHetRec > 5) {
                     print {$OUT} @hapHetRec;
                     $haptenFlag = 1;
                     $fileType{$antibodyPair} = "hap";
+                                        
                 }
                 else {
                     $fileType{$antibodyPair} = "num";
                     next;
                 }
+                                
             }
+                        
         }
-        
+                
     }#abtibody pair
-
+        
     return %fileType;
     
 }
@@ -997,23 +1028,59 @@ sub getProcessedABchains
 
 sub mergeLH
     {
-        my ($antibodyPair) = @_;
+        my ( $LOG, @antibodyPairs) = @_;
 
         my $numberedAntibody;
-
-
+        my $countFailedPairs=0;
+        foreach my $antibodyPair (@antibodyPairs)
+        {
+            
         my ($l, $h) = split ("", $antibodyPair);
-
+                
         if ( ($l) and ($h)) {
                     $numberedAntibody = $antibodyPair."_num.pdb";
                     `cat $l"_num.pdb" $h"_num.pdb" >$numberedAntibody`;
+
+                    print {$LOG} "Each of the antibody in the PDB has been assembled with".
+                        " light and heavy chain in one file\n"; 
+                    my $numLines =`cat $numberedAntibody | wc -l`;
+                    # To check if there is one chain in the $antibodyPair.pdb
+                    if ( $numLines < 1000){
+
+                        # Another check to confirm if kabat numbering has failed
+                        my $errorCheck=`grep "pdbpatchnumbering" numberingFailedChain.dat`;
+                        #my $chainCheck=`grep $lchain|$hchain numberingFailedChain.dat`;
+                        
+                        if ( $errorCheck ){
+                            print {$LOG} "Kabatnum Error-Numbering failed on this pair:$antibodyPair\n";
+                            $countFailedPairs++;
+                        }
+                    }
                 }
-        else {
-            
-            $numberedAntibody = $antibodyPair."_num.pdb";
-        }
-        return $numberedAntibody;
+    }
+        
+        return $countFailedPairs++;
         
     }
 
-             
+sub dealNumError
+{
+    my ($LOG, @singleChainAb)=@_;
+    my $countFailedPairs=0;
+    foreach my $chain (@singleChainAb )
+        {
+            chomp $chain;
+            
+            my $nchain=$chain."_num.pdb";
+            my $errorCheck=`grep "pdbpatchnumbering" numberingFailedChain.dat`;      
+            my $chainCheck = `grep $nchain numberingFailedChain.dat`;
+            
+            if ( ($errorCheck) and ($chainCheck))
+            {
+                print {$LOG} "Kabatnum Error-Numbering failed on this chain:$chain\n";
+                $countFailedPairs++;
+            }
+        }
+    return $countFailedPairs;
+
+}
