@@ -19,6 +19,7 @@ use antibodyProcessing qw (
         mapChainsIDs
         printHeader
         mergeLH
+        getChainLabels
                       );
 use Exporter qw (import);
 our @EXPORT_OK = qw (
@@ -90,11 +91,11 @@ sub processAntibody
     if ( ($numError) and ($countFailedPair >= $pairCount)) {
         $numberingError = 1;
     }
-    
+
     my $hapten = hasHapten ($pdbPath, \@antibodyPairs);
+    
     my $fileType;
     my %fileType;
-    
     my$cdrError=0;
     
         
@@ -170,11 +171,13 @@ sub makeFreeAntibodyComplex
         $lookForFile = $antibodyPair."_".$fileType.".pdb";
  #       $newFile = $pdbId."_".$count.".pdb";
         
-        my $numLines =`cat $lookForFile | wc -l`;
-
+#        my $numLines =`cat $lookForFile | wc -l`;
+        my @chainLabel = getChainLabels($lookForFile);
+        
+       
 #        # To check if there is one chain in the $antibodyPair.pdb 
 
-        if ( ($numLines > 1000) and ($ab eq "LH") ){
+        if ( ( (scalar @chainLabel) == 2) and ($ab eq "LH") ){
                         
             $newFile = $pdbId."_".$count.".pdb";
             open (my $ABFILE, '>>',  "$dir/$newFile");
@@ -204,7 +207,7 @@ sub makeFreeAntibodyComplex
             
         } # if numLines
 
-        elsif ( ( ($ab eq "L") or ($ab eq "H") ) and ($numLines > 700) ) 
+        elsif ( ( ($ab eq "L") or ($ab eq "H") ) and ( (scalar @chainLabel) == 1) ) 
             {
                 $newFile = $pdbId."_".$count.".pdb";    
                 open (my $ABFILE, '>>',  "$dir/$newFile");
@@ -350,9 +353,10 @@ sub makeAntibodyAntigenComplex
             $antigenRef = $complexInfo{$ab_pair};
             @antigen = @{$antigenRef};
         }
-        my $numLines =`cat $numberedAntibody | wc -l`;
-        if ( $numLines > 900)
-        {
+#        my $numLines =`cat $numberedAntibody | wc -l`;
+        my @chainLabel = getChainLabels($numberedAntibody);
+        if ((scalar @chainLabel) == 2) {
+  
         open ( my $AB_FILE, '<', "$dir/$numberedAntibody" ) or
             die "Could not open file $numberedAntibody";
         
@@ -869,11 +873,11 @@ sub assembleCDRsAndFWsWithAntigen
             }
         }
     }
-    close ($AG_FILE);
-    close ($CDR_FILE);
-    close ($FW_FILE);
-    close ($AG_CDR_FILE);
-    close ($AG_FW_FILE);
+#    close ($AG_FILE);
+#    close ($CDR_FILE);
+#    close ($FW_FILE);
+#    close ($AG_CDR_FILE);
+#    close ($AG_FW_FILE);
     return  %antibodyAntigenContacts;
 }
 

@@ -33,6 +33,7 @@ our @EXPORT_OK = qw (
                         getResolInfo
                         mergeLH
                         dealNumError
+                        getChainLabels
                 );
 # ************* getPDBPath *****************
 # Description: For given pdb it return local pdb file path
@@ -313,6 +314,29 @@ sub largestValueInHash
     }
     return $key, $large;
 }
+sub getChainLabels
+    {
+        my ($file) = @_;
+        my @cols;
+        my %chains;
+        open (my $IN, '<', $file) or die "Can not find file $file\n";         
+        while (my $line = <$IN>)
+            {
+
+                chomp $line;
+                if ($line =~ /^ATOM/) {
+                
+                @cols = split(' ', $line);
+                $chains{$cols[4]} = 1;
+            }
+                
+            }
+        my @ch = keys %chains;
+        
+        return @ch;
+        
+}
+    
 
 
 # ************* extractCDRsAndFrameWorks *****************
@@ -335,7 +359,9 @@ sub extractCDRsAndFrameWorks
     foreach my $pair ( @$antibodyPairs )
     {
        $numberedAntibody = $pair."_num.pdb";         
-       my $numLines =`cat $numberedAntibody | wc -l`;
+      my @chains = getChainLabels($numberedAntibody);
+             
+     #  my $numLines =`cat $numberedAntibody | wc -l`;
        
         my $getpdb= $config::getpdb;
         my $CDRsPDB = $pair."_CDR.pdb";
@@ -345,7 +371,8 @@ sub extractCDRsAndFrameWorks
         
         if ( $ab eq "LH")
         {
-            if ( $numLines < 900) {
+            if ( (scalar @chains ) < 2) # Checks if there is any chain missing
+                {
                 print {$LOG} "One of the chain is missing: FWs'/CDRs' can not extracted\n";
                 push (@numFailedPair, $pair);
                 next; 
@@ -368,7 +395,8 @@ $getpdb -v H95 H102 >>$FWsPDB`;
         
         elsif ( $ab eq "L")
         {
-            if ( $numLines < 500) {
+            if ( (scalar @chains ) < 1)
+                {
                 print {$LOG} "One of the chain is missing: FW'/CDRs' can not extracted\n";
                 push (@numFailedPair, $pair);
                 next;
@@ -385,7 +413,7 @@ $getpdb -v L89 L97 >>$FWsPDB`;
         
         elsif ( $ab eq "H")
         {
-            if ( $numLines < 500) {
+            if ((scalar @chains ) < 1) {
                 print {$LOG} "One of the chain is missing: FWs'/CDRs' can not extracted\n";
                 push (@numFailedPair, $pair);
                 next;
@@ -1039,15 +1067,19 @@ sub mergeLH
                 
         if ( ($l) and ($h)) {
                     $numberedAntibody = $antibodyPair."_num.pdb";
+
+
                     `cat $l"_num.pdb" $h"_num.pdb" >$numberedAntibody`;
 
                     print {$LOG} "Each of the antibody in the PDB has been assembled with".
                         " light and heavy chain in one file\n"; 
-                    my $numLines =`cat $numberedAntibody | wc -l`;
+                    my @chains = getChainLabels ($numberedAntibody);
+                    
+                    #my $numLines =`cat $numberedAntibody | wc -l`;
                     # To check if there is one chain in the $antibodyPair.pdb
-                    if ( $numLines < 1000){
-
-                        # Another check to confirm if kabat numbering has failed
+                    if ( (scalar @chains) < 2 )
+                        {
+                            # Another check to confirm if kabat numbering has failed
                         my $errorCheck=`grep "pdbpatchnumbering" numberingFailedChain.dat`;
                         #my $chainCheck=`grep $lchain|$hchain numberingFailedChain.dat`;
                         
