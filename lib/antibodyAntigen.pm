@@ -30,6 +30,8 @@ our @EXPORT_OK = qw (
         getInterchainContacts
         antibodyAssembly
                 );
+
+
 sub processAntibody
 {
     my ($pdbId, $pdbPath, $nsch, $ab, $dir, $masterDir, $LOG, $numbering) = @_;
@@ -65,10 +67,7 @@ sub processAntibody
     print {$LOG} "Light and heavy chains are @lhChains\n";
     #***
 
-
      my $numError = antibodyNumbering ( \@lhChains, $nsch );
-    
-
     
     my ($heavyLightPairContact_HRef, $agContacts_HRef, $antigen_ARef) =
     pairHeavyLightChains ($pdbPath, $chainType_HRef, $chainIdChainTpye_HRef,
@@ -159,7 +158,6 @@ sub makeFreeAntibodyComplex
     foreach my $antibodyPair (@antibodyPairs)
     {
         
-#        mergeLH($antibodyPair, $LOG);                 
         
         if ( %fileTypeH ) {
             $fileType = $fileTypeH{$antibodyPair};
@@ -169,15 +167,15 @@ sub makeFreeAntibodyComplex
             $fileType = "num";
         }
         $lookForFile = $antibodyPair."_".$fileType.".pdb";
- #       $newFile = $pdbId."_".$count.".pdb";
-        
-#        my $numLines =`cat $lookForFile | wc -l`;
+
+        # Get chain labels for chains in given file
         my @chainLabel = getChainLabels($lookForFile);
-        
-       
+               
 #        # To check if there is one chain in the $antibodyPair.pdb 
 
-        if ( ( (scalar @chainLabel) == 2) and ($ab eq "LH") ){
+        if  ( ( ( (scalar @chainLabel) == 2) and ($ab eq "LH")  ) 
+            or ( (scalar @chainLabel) == 1) and (($ab eq "L") or ($ab eq "H") ) )
+            {
                         
             $newFile = $pdbId."_".$count.".pdb";
             open (my $ABFILE, '>>',  "$dir/$newFile");
@@ -206,41 +204,6 @@ sub makeFreeAntibodyComplex
             }
             
         } # if numLines
-
-        elsif ( ( ($ab eq "L") or ($ab eq "H") ) and ( (scalar @chainLabel) == 1) ) 
-            {
-                $newFile = $pdbId."_".$count.".pdb";    
-                open (my $ABFILE, '>>',  "$dir/$newFile");
-                my %mapedChains = mapChainsIDs ($antibodyPair,$chainIdChainTpye_HRef);
-                printHeader($ABFILE, $numbering, $pdbPath, %mapedChains);
-                        
-            open (my $AB, '<', "$dir/$lookForFile") or die "Can't open File\n";
-            while (!eof ($AB))
-                {
-                    my $freeAB = <$AB>;
-                    next if ($freeAB =~ /^MASTER|^END/);
-                    print {$ABFILE} $freeAB;
-                }
-        
-            $count++;
-        
-            if ( $fileType eq "hap") {
-                movePDBs ($dir, $destNonPro, $pdbId);
-                print {$LOG} "This antibody is bound with hapten -- Moved to non- ".
-                    "protein data antigen data\n";
-            }
-            else {
-                movePDBs ($dir, $destFreeAb, $pdbId);
-                print {$LOG} "This antibody is Free -- Moved to Free ".
-                    "antibody data\n";
-            }
-
-
-                
-            }# elsif
-        
-        
-        
                 
     }# $antibody pair
     
@@ -258,24 +221,6 @@ sub processAntibodyAntigen
     my $cdrError = 0;    
     
     my @failedNumPair = extractCDRsAndFrameWorks ( \@antibodyPairs, $ab, $LOG );
-   # print "FFFF: @failedNumPair \n";
-    
-    #eval { extractCDRsAndFrameWorks ( \@antibodyPairs, $ab, $LOG );
-     #      1;
-      # };
-    
-    #if ( $@ ) {
-     #   print {$LOG} "CDR-Error: Can'nt extract CDRs for: $pdbId\n" . $@ .
-      #      "Program exited\n\n";
-       # $cdrError = 1;
-       # return  $cdrError; 
-        #next;
-   # }
-    #else {
-     #   print {$LOG} "CDRs and FWs have been extracted from antibody for ".
-      #      "contact analysis\n";
-    #}
-    
     
     my @antigenChains = @{$antigenIds_ARef};
     my %antibodyAntigenContacts =
@@ -321,7 +266,6 @@ sub makeAntibodyAntigenComplex
                                          $fileType, $dir, $chainIdChainTpye_HRef,
                                          $numbering, $LOG, $destNonPro, $destFreeAb, $ab,
                                          %fileTypeH);
-    
     }
     
     my @antigen;
@@ -329,6 +273,7 @@ sub makeAntibodyAntigenComplex
     
     foreach my $ab_pair( keys %complexInfo )
     {
+                
         $fileType = $fileTypeH{$ab_pair};
         
         my $numberedAntibody;
@@ -354,9 +299,11 @@ sub makeAntibodyAntigenComplex
             @antigen = @{$antigenRef};
         }
 #        my $numLines =`cat $numberedAntibody | wc -l`;
+              
         my @chainLabel = getChainLabels($numberedAntibody);
-        if ((scalar @chainLabel) == 2) {
-  
+        if ( ( (scalar @chainLabel) == 2)
+                 or ( (scalar @chainLabel) == 1) and (($ab eq "L") or ($ab eq "H") )) {
+           
         open ( my $AB_FILE, '<', "$dir/$numberedAntibody" ) or
             die "Could not open file $numberedAntibody";
         
@@ -410,10 +357,10 @@ sub makeAntibodyAntigenComplex
             
         $count++;    
     }
+        
 
     }
-    
-    
+        
     if ( (scalar @antigen) >= 2 )
     {
         $biAntigen = 1;

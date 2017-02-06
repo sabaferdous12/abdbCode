@@ -91,19 +91,6 @@ sub getChainTypeWithChainIDs
     $chainType{'Heavy'} = [];
     $chainType{'Light/Heavy'} = [];
     $chainType{'Heavy/Light'} = [];
-=pod    
-    #check for single chain hybrid FVs
-    my $scFVs = grep (/Light\/Heavy/, @chainInfo);
-    if ( $scFVs)
-    {
-        @chainInfo = ();
-        
-        @chainInfo = `pdbatoms $pdbPath | pdbchain | idabchain`;
-        `pdbatoms $pdbPath | pdbchain | pdbsplitchains`;
-        #splitPdb2Chains($pdbPath);
-    }
-    print "Test: @chainInfo\n";
-=cut    
     
     foreach my $line ( @chainInfo )
         {

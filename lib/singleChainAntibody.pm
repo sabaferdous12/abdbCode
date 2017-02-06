@@ -23,6 +23,7 @@ use antibodyProcessing qw (
                               checkAntigenChains
                               processHapten
                               movePDBs
+                              dealNumError
                       );
 
 sub processSingleChainAntibody
@@ -46,9 +47,6 @@ sub processSingleChainAntibody
     my %chainType = %{$chainType_HRef};
     my $count = 1;
 
-    
-
-
     splitPdb2Chains($pdbPath);
     print {$LOG} "The $pdbId PDB has been splitted in to different files".
         " based on number of chains\n";
@@ -65,52 +63,44 @@ sub processSingleChainAntibody
     
     my @antigenIds =
         checkSingleChainRedundancy ($chainType_HRef, $chainIdChainTpye_HRef, $LOG, $ab);
-    
- #  antibodyAssembly ( @dimerPairs );
-#    antibodyAssembly ( @singleChainAb );
-    
-        
-#    eval { antibodyNumbering ( \@dimerPairs, $nsch );
-    eval { antibodyNumbering ( \@singleChainAb, $nsch );
-                      1;
-       };
 
-    if ($@ ) {
-        print {$LOG} "Kabat Numbering Failed for $pdbId\n" .
-            $@ . "Program exited\n\n";
-        $numberingError = 1;
-        return $numberingError;
-        next;
-    }
-    else {
-        print {$LOG} "All the antibodies in $pdbId has been numbered by".
-            " antibody numbering program\n";
-    }
-    #antibodyAssembly ( @singleChainAb );
-        
+    my $chainCount = scalar @singleChainAb;
+    my $numError = antibodyNumbering ( \@singleChainAb, $nsch );
+    my $countFailedchains = dealNumError ($LOG, @singleChainAb);
+    
+    if ( ($numError) and ($chainCount == $countFailedchains))
+        {
+            $numberingError = 1;
+        }
+    my $cdrError=0;
+    
+    
     # Check for haptens bound with CDRs
     my $hapten = hasHaptenSingleChain ($pdbPath, \@singleChainAb, $chainIdChainTpye_HRef);
     #    my $hapten = hasHaptenSingleChain ($pdbPath, \@dimerPairs, $chainIdChainTpye_HRef);
     my $fileType;
     my %fileTypeH;
-    
+         
     # Checks for haptens and move them to non-Protein data 
     if ( ($hapten) and (!@antigenIds) )
     {
 
-        %fileTypeH = processHapten($pdbPath, \@singleChainAb, $ab);
+        %fileTypeH = processHapten($pdbPath, \@singleChainAb, $ab, $LOG);
+        
         
         makeFreeAntibodyComplex ($pdbId, $pdbPath, \@singleChainAb, $count, $fileType,
                                  $dir, $chainIdChainTpye_HRef, $numbering,
-                                 $LOG, $destNonPro, $destFreeAb, %fileTypeH);
+                                 $LOG, $destNonPro, $destFreeAb, $ab, %fileTypeH);
+                
     }    
 
     # Checks for protein antigens (Further checking is within
     # processAntibodyAntigen subroutine)
     elsif ( (@antigenIds) and (!$hapten) )
     {
+                
         $fileType = "num";
-        $numberingError = processAntibodyAntigen($pdbId, $pdbPath, $ab, \@antigenIds,
+        $cdrError= processAntibodyAntigen($pdbId, $pdbPath, $ab, \@antigenIds,
                                \@singleChainAb, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
                                $destNonPro, $destFreeAb, $numbering, %fileTypeH);
@@ -120,8 +110,8 @@ sub processSingleChainAntibody
     elsif ( (@antigenIds) and ($hapten) )
     {
 #        $fileType = "hap";
-        %fileTypeH =  processHapten($pdbPath, \@singleChainAb, $ab);
-        $numberingError = processAntibodyAntigen($pdbId, $pdbPath, $ab, \@antigenIds,
+        %fileTypeH =  processHapten($pdbPath, \@singleChainAb, $ab, $LOG);
+        $cdrError = processAntibodyAntigen($pdbId, $pdbPath, $ab, \@antigenIds,
                                \@singleChainAb, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
                                $destNonPro, $destFreeAb, $numbering, %fileTypeH);
@@ -131,11 +121,13 @@ sub processSingleChainAntibody
         $fileType = "num";
         makeFreeAntibodyComplex($pdbId, $pdbPath, \@singleChainAb, $count,
                                 $fileType, $dir, $chainIdChainTpye_HRef, $numbering,
-                                $LOG, $destNonPro, $destFreeAb, %fileTypeH);
+                                $LOG, $destNonPro, $destFreeAb, $ab,  %fileTypeH);
     }
     return $numberingError;
     
 }
+
+
 sub pairDimerChains
 {
     my ($pdbPath, $LOG, $singleChainIDs_REF) = @_;
