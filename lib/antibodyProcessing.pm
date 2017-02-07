@@ -6,6 +6,7 @@ use Data::Dumper;
 use List::MoreUtils qw (uniq);
 use config;
 use Carp;
+use Cwd;
 use File::Copy;
 use general qw (readDirPDB);
 use IO::CaptureOutput qw ( capture capture_exec qxx qxy );
@@ -77,10 +78,27 @@ sub getPDBPath
 # Author: Saba
 sub getChainTypeWithChainIDs
 {
-    my ($pdbPath) = @_;
+    my ($pdbPath, $pdb, $LOG) = @_;
     my $idabchain = $config::idabchain;
+    my $idabFiledir = $config::idabFiledir;    
+    my @chainInfo;
+    
+    # Check if pdb code exists in idabMisLabel.dat file
+    # if yes then get info from file otherwise prompt idabachain program
+    my $nPdb = `grep $pdb $idabFiledir/idabMisLabel.dat`;
+    chomp $nPdb;
+    
+    if ( $pdb ) {
+        my $idabInfo = $nPdb.".dat";
+        open (my $IN, '<', "$idabFiledir/$idabInfo") or die "Can not open file: $idabInfo";
+        @chainInfo = <$IN>;
+        print {$LOG} "Chain Type information is taken from manual fixed idabchain cases\n";
+    }
     # Gets chain IDs and chain Types from program idabchain
-    my @chainInfo = `$idabchain $pdbPath`;
+    else {
+        @chainInfo = `$idabchain $pdbPath`;
+        print {$LOG} "Chain Type information is taken from idabchain program\n";
+    }
     
     my %chainType = ();
     my %chainIdChainTpye;
@@ -148,9 +166,9 @@ sub getChainTypeWithChainIDs
 
 sub getChains
 {
-    my ($pdbPath) = @_;
+    my ($pdbPath, $pdb, $LOG) = @_;
     my ($chainType_HRef, $chainIdChainTpye_HRef) =
-        getChainTypeWithChainIDs ($pdbPath);
+        getChainTypeWithChainIDs ($pdbPath, $pdb, $LOG);
     my %chainType = %{$chainType_HRef};
 
 #    print Dumper (\%chainType);
