@@ -136,7 +136,7 @@ foreach my $pdb ( @PDBCodes )
     # Get antibody chain info
     my ($light_ARef, $heavy_ARef, $antigen_ARef,
         $LHhybrid_ARef, $HLhybrid_ARef) =
-        getChains ($pdbPath);
+        getChains ($pdbPath, $pdb, $LOG);
     my @light = @{$light_ARef};
     my @heavy = @{$heavy_ARef};
     my @antigens = @{$antigen_ARef};

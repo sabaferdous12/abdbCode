@@ -22,6 +22,8 @@ $pdbsplitchains = "/home/bsm/martin/bin/pdbsplitchains";
 $renumpdb = '/home/bsm/martin/bin/renumpdb';
 $getpdb = '/home/bsm/martin/bin/getpdb';
 
+###
+$idabFiledir= "/acrm/bsmhome/ucbterd/git/abdbCode/lib/fixed/";
 
 1;
 

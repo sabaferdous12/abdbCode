@@ -1,4 +1,4 @@
-package SFPerlVars;
+package config;
 
 
 # About the PDB
@@ -22,6 +22,8 @@ $pdbsplitchains = "/home/bsm/martin/bin/pdbsplitchains";
 $renumpdb = '/home/bsm/martin/bin/renumpdb';
 $getpdb = '/home/bsm/martin/bin/getpdb';
 
+###
+$idabFile= "/acrm/bsmhome/ucbterd/git/abdbCode/lib/fixed/";
 
 1;
 

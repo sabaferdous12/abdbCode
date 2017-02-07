@@ -37,7 +37,7 @@ sub processSingleChainAntibody
     my $numberingError = 0;
     
     my ($chainType_HRef, $chainIdChainTpye_HRef) =
-        getChainTypeWithChainIDs ($pdbPath);
+        getChainTypeWithChainIDs ($pdbPath, $pdbId, $LOG);
 
     print {$LOG} "Antibody chain types with chain IDs: \n";
     print {$LOG} Dumper ($chainType_HRef);

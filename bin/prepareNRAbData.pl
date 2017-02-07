@@ -11,7 +11,7 @@ use antibodyProcessing qw (getResolInfo
 my $infile = $ARGV[0]; # List of redundant clusters
 my $outputDir = $ARGV[1]; # Directory to store non-redundant data
 
-open(my $IN, $infile) or die "Can not open $!\n";
+open(my $IN, $infile) or die "Can not open input file$!\n";
 
 my @nrFiles;
 my @redundPDBcodes;
@@ -61,7 +61,7 @@ foreach  my $nrFile (@bestABs)
         $nrFile =~ s/,//;
     }
     my $nrFile = $nrFile.".pdb";
-    my $dest = "../$outputDir";
+    my $dest = "$outputDir";
     if (-e $nrFile)
     {
         copy ($nrFile, $dest);
