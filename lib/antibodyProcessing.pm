@@ -88,7 +88,7 @@ sub getChainTypeWithChainIDs
     my $nPdb = `grep $pdb $idabFiledir/idabMisLabel.dat`;
     chomp $nPdb;
     
-    if ( $pdb ) {
+    if ( $nPdb ) {
         my $idabInfo = $nPdb.".dat";
         open (my $IN, '<', "$idabFiledir/$idabInfo") or die "Can not open file: $idabInfo";
         @chainInfo = <$IN>;
@@ -813,7 +813,7 @@ sub printHeader
 # The subroutine extracts SEQRES from PDB file for given chain label...
 sub getSEQRES
 {
-    my ($pdbPath, $chainID) = @_;
+    my ($pdbPath, $chainID, $chainLabel) = @_;
     open (my $IN, $pdbPath) or die "Error in opening file\n";
     my @fileContent = <$IN>;
     my @seqRes;
@@ -823,6 +823,11 @@ sub getSEQRES
         {
             push (@seqRes, $line);
         }
+    }
+    # Replace the Light and heavy chain labels with L or H
+    # This is to have consistency in the headers of  PDB output file 
+    if ( $chainLabel ) {
+        @seqRes = map {s/\s+$chainID\s+/ $chainLabel /g; $_; } @seqRes; 
     }
     
    return @seqRes;
@@ -856,10 +861,10 @@ sub headerLHchains
         print $INFILE "REMARK 950 ", `pdbheader -c $L2 -s $pdbPath`;
         print $INFILE "REMARK 950 ", `pdbheader -c $H2 -m $pdbPath`;
         print $INFILE "REMARK 950 ", `pdbheader -c $H2 -s $pdbPath`;
-        my @seqRes = getSEQRES($pdbPath, $L2);
+        my @seqRes = getSEQRES($pdbPath, $L2, "L");
         print $INFILE @seqRes;
         
-        @seqRes = getSEQRES($pdbPath, $H2);
+        @seqRes = getSEQRES($pdbPath, $H2, "H");
         print $INFILE @seqRes;
         
         
@@ -896,10 +901,10 @@ sub headerLHchains
             print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
         }
 # Printing SEQRES for antibody
-        my @seqRes = getSEQRES($pdbPath, $L2);
+        my @seqRes = getSEQRES($pdbPath, $L2, "L");
         print $INFILE @seqRes;
         
-        @seqRes = getSEQRES($pdbPath, $H2);
+        @seqRes = getSEQRES($pdbPath, $H2, "H");
         print $INFILE @seqRes;
 # Printing SEQRES for antigen
         foreach my $Ag ( @ag ) {
@@ -921,7 +926,7 @@ sub headerLHchains
             print $INFILE "REMARK 950 ", `pdbheader -c $L2 -m $pdbPath`;
             print $INFILE "REMARK 950 ", `pdbheader -c $L2 -s $pdbPath`;
 
-            my @seqRes = getSEQRES($pdbPath, $L2);
+            my @seqRes = getSEQRES($pdbPath, $L2, "L");
             print $INFILE @seqRes;
            
         }
@@ -946,7 +951,7 @@ sub headerLHchains
                 print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
             }
 
-            my  @seqRes = getSEQRES($pdbPath, $L2);
+            my  @seqRes = getSEQRES($pdbPath, $L2, "L");
             print $INFILE @seqRes;
             
             foreach  my $Ag ( @ag ) {
@@ -967,7 +972,7 @@ sub headerLHchains
             print $INFILE "REMARK 950 CHAIN H    H    $H2\n";
             print $INFILE "REMARK 950 ", `pdbheader -c $H2 -m $pdbPath`;
             print $INFILE "REMARK 950 ", `pdbheader -c $H2 -s $pdbPath`;
-            my @seqRes = getSEQRES($pdbPath, $H2);
+            my @seqRes = getSEQRES($pdbPath, $H2, "H");
             print $INFILE @seqRes;
             
         }
@@ -989,7 +994,7 @@ sub headerLHchains
                 print $INFILE "REMARK 950 ", `pdbheader -c $Ag -m $pdbPath`;
                 print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
             }
-            my @seqRes = getSEQRES($pdbPath, $H2);
+            my @seqRes = getSEQRES($pdbPath, $H2, "H");
             print $INFILE @seqRes;
             
             foreach  my $Ag ( @ag ) {
