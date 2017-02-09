@@ -49,7 +49,7 @@ sub processAntibody
     print {$LOG} "Antibody chain IDs, chain Labels and chain sequences: \n";
     print {$LOG} Dumper ($chainIdChainTpye_HRef);
     
-    splitPdb2Chains($pdbPath);
+    my @PDBchains = splitPdb2Chains($pdbPath);
 
         print {$LOG} "The $pdbId PDB has been splitted in to different files".
             " based on number of chains\n";
@@ -179,8 +179,8 @@ sub makeFreeAntibodyComplex
                         
             $newFile = $pdbId."_".$count.".pdb";
             open (my $ABFILE, '>>',  "$dir/$newFile");
-            my %mapedChains = mapChainsIDs ($antibodyPair,$chainIdChainTpye_HRef);
-            printHeader($ABFILE, $numbering, $pdbPath, %mapedChains);
+            my %mapedChains = mapChainsIDs ($ab, $antibodyPair,$chainIdChainTpye_HRef);
+            printHeader($ab, $ABFILE, $numbering, $pdbPath, %mapedChains);
                         
             open (my $AB, '<', "$dir/$lookForFile") or die "Can't open File\n";
             while (!eof ($AB))
@@ -311,8 +311,8 @@ sub makeAntibodyAntigenComplex
             die "Can not write complex";
 
         # Print headers
-        my %mapedChains = mapChainsIDs ($ab_pair,$chainIdChainTpye_HRef, %complexInfo );     
-        printHeader($AG_AB_FILE, $numbering, $pdbPath, %mapedChains);
+        my %mapedChains = mapChainsIDs ($ab, $ab_pair,$chainIdChainTpye_HRef, %complexInfo );     
+        printHeader($ab, $AG_AB_FILE, $numbering, $pdbPath, %mapedChains);
                 
         # In case of multiple antigens making contacts with antibody
         

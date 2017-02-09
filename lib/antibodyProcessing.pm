@@ -204,17 +204,21 @@ sub splitPdb2Chains
         
     # To strip header and keeping only ATOMs and then spliting PDB into chains
     `$pdbatoms $pdbPath | $pdbSplitChains`;
-    my @PDBchains = readDirPDB($dir); # Reads all PDB files in directory
+    my @PDBchainsFiles = readDirPDB($dir); # Reads all PDB files in directory
+    my @PDBchains;
     
-    foreach my $chain (@PDBchains)
+    foreach my $chain (@PDBchainsFiles)
         {
             my ($chainID, $ext) = split (/\./, $chain);
             # To discard HETATM by selecting each chain and keeping
             # only ATOM lines                                       
             `$pdbgetchain -a $chainID $chain >$chainID`;
             `mv $chainID $chainID.pdb`; # Rename A as A.pdb
+            push (@PDBchains, $chainID);           
         }
     close $PDBFILE;
+    return @PDBchains;
+    
 }
 
 # ************* checkAntigenChains *****************
@@ -748,16 +752,17 @@ sub dirOperations
 
 sub mapChainsIDs
 {
-    my ($abPair, $chainIdChainTpye_HRef, %complexInfo) = @_;
+    my ($ab, $abPair, $chainIdChainTpye_HRef, %complexInfo) = @_;
     my %mapedChains;
     my %chainIdChainTpye = %{$chainIdChainTpye_HRef};
     
-    if ( length ($abPair) == 2 )
+    if ( ( length ($abPair) == 2 ) and ($ab eq "LH") )
     {
         my ($L, $H);
         ($L, $H) = split ("", $abPair);
         $mapedChains{'L'} = $L;
         $mapedChains{'H'} = $H;
+        
         if ( !%complexInfo) {
             $mapedChains{'A'} = [];
         }
@@ -766,6 +771,29 @@ sub mapChainsIDs
         }
         
     }
+
+    if ( ( length ($abPair) == 2 ) and ( ($ab eq "L") or ($ab eq "H") ) )
+    {
+        my ($c1, $c2);
+        ($c1, $c2) = split ("", $abPair);
+        if ( $ab eq "L") {
+            $mapedChains{'L1'} = $c1;
+            $mapedChains{'L2'} = $c2;
+        }
+        elsif ( $ab eq "H" ) {
+            $mapedChains{'H1'} = $c1;
+            $mapedChains{'H2'} = $c2;
+        }
+        
+        if ( !%complexInfo) {
+            $mapedChains{'A'} = [];
+        }
+        else {
+            $mapedChains{'A'} = $complexInfo{$abPair};
+        }
+        
+    }
+
     else {
         my $chainLabel;
         my $key;
@@ -798,12 +826,24 @@ sub mapChainsIDs
     
 sub printHeader
 {
-    my ($INFILE, $numbering, $pdbPath, %mapedChains ) = @_;
+    my ($ab, $INFILE, $numbering, $pdbPath, %mapedChains ) = @_;
     my %resInfo = getResolInfo($pdbPath);
+    my ($L, $H);
+
+    if ( $ab eq "L") {
+         $L = $mapedChains{L1};
+         $H = $mapedChains{L2};
+    }
+    elsif ( $ab eq "H") {
+         $L = $mapedChains{H1};
+         $H = $mapedChains{H2};
+    }
+    elsif ( $ab eq "LH") {
+         $L = $mapedChains{L};
+         $H = $mapedChains{H};
+    }
     
-    my $L = $mapedChains{L};
-    my $H = $mapedChains{H};
-    my $AgRef = $mapedChains{A};
+        my $AgRef = $mapedChains{A};
     
     my @ag = @{$AgRef};
 

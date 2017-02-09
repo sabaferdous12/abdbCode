@@ -4,6 +4,7 @@ use Carp;
 #use warnings;
 use config;
 use Data::Dumper;
+use File::Basename;
 
 use Exporter qw (import);
 our @EXPORT_OK = qw (
@@ -15,6 +16,7 @@ use antibodyAntigen qw (
                            processAntibodyAntigen
                            getInterchainContacts
                            antibodyAssembly
+                           
                    );
 
 use antibodyProcessing qw (
@@ -24,6 +26,8 @@ use antibodyProcessing qw (
                               processHapten
                               movePDBs
                               dealNumError
+                              mergeLH
+                              hasHapten
                       );
 
 sub processSingleChainAntibody
@@ -35,6 +39,7 @@ sub processSingleChainAntibody
     my $destFreeAb = "$masterDir"."/".$ab."_Free_".$numbering;
     my @singleChainAb;
     my $numberingError = 0;
+    my @dimers;
     
     my ($chainType_HRef, $chainIdChainTpye_HRef) =
         getChainTypeWithChainIDs ($pdbPath, $pdbId, $LOG);
@@ -45,47 +50,87 @@ sub processSingleChainAntibody
     print {$LOG} Dumper ($chainIdChainTpye_HRef);
 
     my %chainType = %{$chainType_HRef};
+
+   my @antigenIds =
+        checkSingleChainRedundancy ($chainType_HRef, $chainIdChainTpye_HRef, $LOG, $ab);
+
     my $count = 1;
 
-    splitPdb2Chains($pdbPath);
+    my $pdbsymm = $config::pdbsymm;
+    my $pdbcount = $config::pdbcount;
+    
+    my $symPdb = "temp.sym";
+
+    # Apply Symmetery operation on PDB 
+    `$pdbsymm $pdbPath >$symPdb`;
+    print {$LOG} "Symmetery Operation has been applied\n";
+
+    # Count number of chains in original and symmetry/translated PDB  
+    my $chainsPdb = `$pdbcount $pdbPath | awk -F " " '{print \$2}'`;
+    my $chainsSym = `$pdbcount $symPdb | awk -F " " '{print \$2}'`;
+
+    # Compare the number of chains. If symmetry PDB has more chains than original then
+    # al the chains from that PDB will be split
+    my $dimer_flag = 0;
+    
+    if ( $chainsSym > $chainsPdb ) {
+        $pdbPath = $symPdb;
+        print {$LOG} "Symmetry PDB file will be used to split the chains\n";
+        $dimer_flag = 1;
+    }
+
+    my @PDBchains = splitPdb2Chains($pdbPath);
     print {$LOG} "The $pdbId PDB has been splitted in to different files".
         " based on number of chains\n";
 
-    if ( $ab eq "L") {
-        @singleChainAb = @{$chainType{Light}};
-    }
-    elsif ( $ab eq "H") {
-        @singleChainAb = @{$chainType{Heavy}};
-    }
 
-#    my %dimerPairs = pairDimerChains($pdbPath, $LOG, \@singleChainAb);
-#    my @dimerPairs = keys %dimerPairs;
-    
-    my @antigenIds =
-        checkSingleChainRedundancy ($chainType_HRef, $chainIdChainTpye_HRef, $LOG, $ab);
-
-    my $chainCount = scalar @singleChainAb;
-    my $numError = antibodyNumbering ( \@singleChainAb, $nsch );
-    my $countFailedchains = dealNumError ($LOG, @singleChainAb);
+    my $chainCount = scalar @PDBchains;
+    my $numError = antibodyNumbering ( \@PDBchains, $nsch );
+    my $countFailedchains = dealNumError ($LOG, @PDBchains);
     
     if ( ($numError) and ($chainCount == $countFailedchains))
         {
             $numberingError = 1;
         }
     my $cdrError=0;
-    
-    
-    # Check for haptens bound with CDRs
-    my $hapten = hasHaptenSingleChain ($pdbPath, \@singleChainAb, $chainIdChainTpye_HRef);
-    #    my $hapten = hasHaptenSingleChain ($pdbPath, \@dimerPairs, $chainIdChainTpye_HRef);
+ 
+    if ( $ab eq "L") {
+        @singleChainAb = @{$chainType{Light}};
+        @dimers = getDimers(@PDBchains);
+        mergeLH ($LOG, @dimers);
+        
+        print "DIMERS: @dimers\n";
+        
+    }
+    elsif ( $ab eq "H") {
+        @singleChainAb = @{$chainType{Heavy}};
+    }
+        
     my $fileType;
     my %fileTypeH;
+    my $hapten;
+    
+    if ( $dimer_flag ) {
+        $hapten = hasHapten ($pdbPath, \@dimers);
+        %fileTypeH = processHapten($pdbPath, \@dimers, $ab, $LOG);
+        
+    }
+    # Check for haptens bound with CDRs
+    else {
+        $hapten = hasHaptenSingleChain ($pdbPath, \@singleChainAb, $chainIdChainTpye_HRef);
+        %fileTypeH = processHapten($pdbPath, \@singleChainAb, $ab, $LOG);
+    }
+
+    if ( $dimer_flag ) {
+        @singleChainAb = 0;
+        @singleChainAb = @dimers;
+    }
          
     # Checks for haptens and move them to non-Protein data 
     if ( ($hapten) and (!@antigenIds) )
     {
 
-        %fileTypeH = processHapten($pdbPath, \@singleChainAb, $ab, $LOG);
+ #       %fileTypeH = processHapten($pdbPath, \@singleChainAb, $ab, $LOG);
         
         
         makeFreeAntibodyComplex ($pdbId, $pdbPath, \@singleChainAb, $count, $fileType,
@@ -110,7 +155,7 @@ sub processSingleChainAntibody
     elsif ( (@antigenIds) and ($hapten) )
     {
 #        $fileType = "hap";
-        %fileTypeH =  processHapten($pdbPath, \@singleChainAb, $ab, $LOG);
+#        %fileTypeH =  processHapten($pdbPath, \@singleChainAb, $ab, $LOG);
         $cdrError = processAntibodyAntigen($pdbId, $pdbPath, $ab, \@antigenIds,
                                \@singleChainAb, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
@@ -124,6 +169,63 @@ sub processSingleChainAntibody
                                 $LOG, $destNonPro, $destFreeAb, $ab,  %fileTypeH);
     }
     return $numberingError;
+    
+}
+
+
+sub getDimers
+{
+    my (@PDBchains) = @_;
+    my @pos = ("36", "87", "40");
+    my %dimers;
+    my ($d36, $d40, $d87); 
+    for (my $i=0; $i < (scalar @PDBchains); $i++ )
+    {
+        for ( my $j=($i+1); $j < (scalar @PDBchains); $j++ )
+        {
+         foreach my $p (@pos)
+         {
+             # Look for numbered files
+             my $f1 = $PDBchains[$i]."_num.pdb";
+             my $f2 = $PDBchains[$j]."_num.pdb";
+             my $fTemp = $PDBchains[$j].".temp";
+
+             # Replace Chain label L with l to compute the distance
+             open (my $IF2, '<', $f2) or die "Can not open file: $f2\n"; 
+             my @a = <$IF2>;
+             @a = map {s/\s+L\s+/ l /g; $_;} @a;
+             close $IF2;
+
+             # Writing chain l in temporary file
+             open (my $OF2, '>', $fTemp) or die "Can not open file: $fTemp\n";
+             print {$OF2} @a;
+                  
+             my @dist = `cat $f1 $fTemp | pdbdist "L"$p "l"$p`;
+            
+             my @d = split (/ /, $dist[0]);
+             if ($p == 40)
+                 {
+                     $d40=$d[3];
+                 }
+             elsif ( $p == 36)
+                 {
+                     $d36=$d[3];
+                 }
+             elsif ($p == 87)
+                 {
+                     $d87=$d[3];
+                 } 
+         }
+         
+             if ( ( $d36 < 20 ) and ($d87 < 20) and ($d40 < 15) )
+                 {
+                     $dimers{"$PDBchains[$i]$PDBchains[$j]"}=1;
+                 }
+     }
+          
+    }
+    my @dimers = keys (%dimers); 
+    return @dimers;
     
 }
 
