@@ -70,10 +70,10 @@ sub processSingleChainAntibody
     my $chainsSym = `$pdbcount $symPdb | awk -F " " '{print \$2}'`;
 
     # Compare the number of chains. If symmetry PDB has more chains than original then
-    # al the chains from that PDB will be split
+    # all the chains from that PDB will be split
     my $dimer_flag = 0;
     
-    if ( $chainsSym > $chainsPdb ) {
+    if ( ( $chainsSym >= $chainsPdb ) and ($chainsPdb != 1) ){
         $pdbPath = $symPdb;
         print {$LOG} "Symmetry PDB file will be used to split the chains\n";
         $dimer_flag = 1;
@@ -96,8 +96,9 @@ sub processSingleChainAntibody
  
     if ( $ab eq "L") {
         @singleChainAb = @{$chainType{Light}};
-        @dimers = getDimers(@PDBchains);
+        @dimers = getDimers(@singleChainAb);
         mergeLH ($LOG, @dimers);
+        print "LLLLL: @singleChainAb\n";
         
         print "DIMERS: @dimers\n";
         
@@ -143,7 +144,7 @@ sub processSingleChainAntibody
     # processAntibodyAntigen subroutine)
     elsif ( (@antigenIds) and (!$hapten) )
     {
-                
+
         $fileType = "num";
         $cdrError= processAntibodyAntigen($pdbId, $pdbPath, $ab, \@antigenIds,
                                \@singleChainAb, $fileType, $dir, $masterDir,
@@ -154,7 +155,9 @@ sub processSingleChainAntibody
     # Antibody bound with antigen and haptens - Moved to protein antigen data
     elsif ( (@antigenIds) and ($hapten) )
     {
-#        $fileType = "hap";
+
+                
+        #        $fileType = "hap";
 #        %fileTypeH =  processHapten($pdbPath, \@singleChainAb, $ab, $LOG);
         $cdrError = processAntibodyAntigen($pdbId, $pdbPath, $ab, \@antigenIds,
                                \@singleChainAb, $fileType, $dir, $masterDir,
@@ -176,6 +179,8 @@ sub processSingleChainAntibody
 sub getDimers
 {
     my (@PDBchains) = @_;
+    @PDBchains = sort @PDBchains;
+    
     my @pos = ("36", "87", "40");
     my %dimers;
     my ($d36, $d40, $d87); 
@@ -183,6 +188,7 @@ sub getDimers
     {
         for ( my $j=($i+1); $j < (scalar @PDBchains); $j++ )
         {
+            
          foreach my $p (@pos)
          {
              # Look for numbered files
@@ -201,13 +207,16 @@ sub getDimers
              print {$OF2} @a;
                   
              my @dist = `cat $f1 $fTemp | pdbdist "L"$p "l"$p`;
-            
+
+             #print "TTTT: \n";
+             #print @dist;
+             
              my @d = split (/ /, $dist[0]);
              if ($p == 40)
                  {
                      $d40=$d[3];
                  }
-             elsif ( $p == 36)
+             elsif ($p == 36)
                  {
                      $d36=$d[3];
                  }
@@ -216,6 +225,8 @@ sub getDimers
                      $d87=$d[3];
                  } 
          }
+
+         print "$PDBchains[$i]$PDBchains[$j]\nD36:$d36:D40:$d40:D87:$d87\n";
          
              if ( ( $d36 < 20 ) and ($d87 < 20) and ($d40 < 15) )
                  {
@@ -224,12 +235,12 @@ sub getDimers
      }
           
     }
-    my @dimers = keys (%dimers); 
+    my @dimers = keys (%dimers);
     return @dimers;
     
 }
 
-
+=pod
 sub pairDimerChains
 {
     my ($pdbPath, $LOG, $singleChainIDs_REF) = @_;
@@ -256,7 +267,8 @@ sub pairDimerChains
     print {$LOG} "The dimerizing pairs are: \n", Dumper (\%dimers);
     return (%dimers);
 }
-  
+=cut
+
 sub hasHaptenSingleChain
 {
     my ($pdbPath, $singleChainAb_ARef, $chainIdChainTpye_HRef) = @_;

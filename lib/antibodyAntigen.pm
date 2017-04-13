@@ -180,6 +180,7 @@ sub makeFreeAntibodyComplex
             $newFile = $pdbId."_".$count.".pdb";
             open (my $ABFILE, '>>',  "$dir/$newFile");
             my %mapedChains = mapChainsIDs ($ab, $antibodyPair,$chainIdChainTpye_HRef);
+                    
             printHeader($ab, $ABFILE, $numbering, $pdbPath, %mapedChains);
                         
             open (my $AB, '<', "$dir/$lookForFile") or die "Can't open File\n";
