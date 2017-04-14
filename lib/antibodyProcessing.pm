@@ -259,6 +259,7 @@ sub checkAntigenChains
         {
             my $antigenPDB = $antigenChain.".pdb"; # L as L.pdb
             my $newChainLabel = lc ($antigenChain);
+                                  
             # Rename L chain ID as l and save as %l.pdb 
         `$renumpdb -c $newChainLabel -n -d $antigenPDB "%"$newChainLabel.pdb`;
             my $filename = "%".$newChainLabel;
@@ -830,8 +831,8 @@ sub printHeader
     my %resInfo = getResolInfo($pdbPath);
     my ($L, $H);
 
-    #print "GGG\n";
-    #print Dumper (\%mapedChains);
+#    print "GGG\n";
+#    print Dumper (\%mapedChains);
     
     my $AgRef = $mapedChains{A};
     my @ag = @{$AgRef};
@@ -928,7 +929,7 @@ sub headerLHchains
             print $INFILE @seqRes;
         }
         else {
-            # if its a dimer
+            # if its a light dimer
             if ( $ab eq "L") {
                 print $INFILE "REMARK 950 CHAIN L    L    $LL\n";
                 print $INFILE "REMARK 950 CHAIN L    L    $HH\n";
@@ -970,7 +971,7 @@ sub headerLHchains
             {
                 print $INFILE "REMARK 950 CHAIN L    L    $LL\n";
                 print $INFILE "REMARK 950 CHAIN H    H    $HH\n";
-
+# To print Antigen Header information 
                 foreach my $Ag ( @ag ) {
                     if ( ( $Ag eq "%l") or ($Ag eq "%h") )
                         {
@@ -998,43 +999,132 @@ sub headerLHchains
                     print $INFILE "REMARK 950 ", `pdbheader -c $Ag -m $pdbPath`;
                     print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
                 }
+
+                # Printing SeqRes
+                # Printing SEQRES for antibody
+                my @seqRes = getSEQRES($pdbPath, $LL, "L");
+                print $INFILE @seqRes;
+                
+                @seqRes = getSEQRES($pdbPath, $HH, "H");
+                print $INFILE @seqRes;
+                # Printing SEQRES for antigen
+                foreach my $Ag ( @ag ) {
+                    if ( ( $Ag eq "%l") or ($Ag eq "%h") )
+                        {
+                            ($sym, $AgID) = split ("", $Ag);
+                            $Ag = uc ($AgID);
+                        }
+                    @seqRes = getSEQRES($pdbPath, $Ag);
+                    print $INFILE @seqRes;
+                    
+                }
+                
             }
         else {
             if ($ab eq "L")
                 {
                     print $INFILE "REMARK 950 CHAIN L    L    $LL\n";
                     print $INFILE "REMARK 950 CHAIN L    L    $HH\n";
+
+                    foreach my $Ag ( @ag ) {
+                        if ( ( $Ag eq "%l") or ($Ag eq "%h") )
+                        {
+                            ($sym, $AgID) = split ("", $Ag);
+                            $Ag = uc ($AgID);
+                            print $INFILE "REMARK 950 CHAIN A    $AgID    $Ag\n";
+                        }
+                    else {
+                        print $INFILE "REMARK 950 CHAIN A    $Ag    $Ag\n";
+                    }
+                }
+                # For Dimer print header information just for one chain                    
                     print $INFILE "REMARK 950 ", `pdbheader -c $LL -m $pdbPath`;
                     print $INFILE "REMARK 950 ", `pdbheader -c $LL -s $pdbPath`;
+
+                    foreach my $Ag ( @ag ) {
+                        if ( ( $Ag eq "%l") or ($Ag eq "%h") )
+                        {
+                            ($sym, $AgID) = split ("", $Ag);
+                            $Ag = uc ($AgID);
+                        }
+                        
+                        print $INFILE "REMARK 950 ", `pdbheader -c $Ag -m $pdbPath`;
+                        print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
+                    }
                     
+                        # Printing SeqRes
+                        # Printing SEQRES for antibody
+                        my @seqRes = getSEQRES($pdbPath, $LL, "L");
+                        print $INFILE @seqRes;
+                        
+                        @seqRes = getSEQRES($pdbPath, $HH, "L");
+                        print $INFILE @seqRes;
+                        # Printing SEQRES for antigen
+                        foreach my $Ag ( @ag ) {
+                            if ( ( $Ag eq "%l") or ($Ag eq "%h") )
+                                {
+                                    ($sym, $AgID) = split ("", $Ag);
+                                    $Ag = uc ($AgID);
+                                }
+                            @seqRes = getSEQRES($pdbPath, $Ag);
+                            print $INFILE @seqRes;
+            
+                        }
+                                        
                 }
             elsif ($ab eq "H")
                 {
                     print $INFILE "REMARK 950 CHAIN H    H    $LL\n";
                     print $INFILE "REMARK 950 CHAIN H    H    $HH\n";
+
+                    foreach my $Ag ( @ag ) {
+                        if ( ( $Ag eq "%l") or ($Ag eq "%h") )
+                        {
+                            ($sym, $AgID) = split ("", $Ag);
+                            $Ag = uc ($AgID);
+                            print $INFILE "REMARK 950 CHAIN A    $AgID    $Ag\n";
+                        }
+                    else {
+                        print $INFILE "REMARK 950 CHAIN A    $Ag    $Ag\n";
+                    }
+                    }
+                                        
                     print $INFILE "REMARK 950 ", `pdbheader -c $LL -m $pdbPath`;
                     print $INFILE "REMARK 950 ", `pdbheader -c $LL -s $pdbPath`;
+
+                    foreach my $Ag ( @ag ) {
+                        if ( ( $Ag eq "%l") or ($Ag eq "%h") )
+                        {
+                            ($sym, $AgID) = split ("", $Ag);
+                            $Ag = uc ($AgID);
+                        }
+                        
+                        print $INFILE "REMARK 950 ", `pdbheader -c $Ag -m $pdbPath`;
+                        print $INFILE "REMARK 950 ", `pdbheader -c $Ag -s $pdbPath`;
+                    }
+
+                    # Printing SEQRES for antibody
+                    my @seqRes = getSEQRES($pdbPath, $LL, "H");
+                    print $INFILE @seqRes;
+                    
+                    @seqRes = getSEQRES($pdbPath, $HH, "H");
+                    print $INFILE @seqRes;
+                    # Printing SEQRES for antigen
+                    foreach my $Ag ( @ag ) {
+                        if ( ( $Ag eq "%l") or ($Ag eq "%h") )
+                            {
+                                ($sym, $AgID) = split ("", $Ag);
+                                $Ag = uc ($AgID);
+                            }
+                        @seqRes = getSEQRES($pdbPath, $Ag);
+                        print $INFILE @seqRes;
+            
+                    }
+
                 }
         } 
         
-# Printing SEQRES for antibody
-        my @seqRes = getSEQRES($pdbPath, $LL, "L");
-        print $INFILE @seqRes;
-        
-        @seqRes = getSEQRES($pdbPath, $HH, "H");
-        print $INFILE @seqRes;
-# Printing SEQRES for antigen
-        foreach my $Ag ( @ag ) {
-            if ( ( $Ag eq "%l") or ($Ag eq "%h") )
-            {
-                ($sym, $AgID) = split ("", $Ag);
-                $Ag = uc ($AgID);
-            }
-            @seqRes = getSEQRES($pdbPath, $Ag);
-            print $INFILE @seqRes;
             
-        }
-
     }
     
 # Print headers for light chain only 

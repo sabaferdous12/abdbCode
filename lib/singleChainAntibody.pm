@@ -51,8 +51,8 @@ sub processSingleChainAntibody
 
     my %chainType = %{$chainType_HRef};
 
-   my @antigenIds =
-        checkSingleChainRedundancy ($chainType_HRef, $chainIdChainTpye_HRef, $LOG, $ab);
+#   my @antigenIds =
+ #       checkSingleChainRedundancy ($chainType_HRef, $chainIdChainTpye_HRef, $LOG, $ab);
 
     my $count = 1;
 
@@ -72,18 +72,71 @@ sub processSingleChainAntibody
     # Compare the number of chains. If symmetry PDB has more chains than original then
     # all the chains from that PDB will be split
     my $dimer_flag = 0;
+    my @PDBchains;
     
     if ( ( $chainsSym >= $chainsPdb ) and ($chainsPdb != 1) ){
         $pdbPath = $symPdb;
         print {$LOG} "Symmetry PDB file will be used to split the chains\n";
         $dimer_flag = 1;
     }
+    
+         @PDBchains = splitPdb2Chains($pdbPath);
+        print {$LOG} "The $pdbId PDB has been splitted in to different files".
+            " based on number of chains\n";
 
-    my @PDBchains = splitPdb2Chains($pdbPath);
-    print {$LOG} "The $pdbId PDB has been splitted in to different files".
-        " based on number of chains\n";
+     my @antigenIds =
+         checkSingleChainRedundancy ($chainType_HRef, $chainIdChainTpye_HRef, $LOG, $ab);
+    
+##############    
+    # If a single light chain is not redundant then it should not be treated as antigen
+    # so excluded that from antigen array
+    my $index = 0;
+    foreach my $ag(@antigenIds ) {
+        
+     my  @lightChain = @{$chainType{Light}};
+               
+        if  (grep {$_ eq $ag} @lightChain) {
+            splice @antigenIds, $index, 1;
+        
+        }
+     $index++;
+     
+    }
+
+##############
+    
+    ##############    
+    # check for Antigen Symmetry file
+    # For antigen chains, it checks for similar files on basis of number
+    # of lines and then updates the antigenIds array
+    my ($fLines, $AG, @tempArr);
+       foreach $AG( @antigenIds) {
+           my $f = $AG.".pdb";
+          # if ( ($f eq "%h.pdb") or ($f eq "%l.pdb") ){
+           #               print "SEEE: $AG\n";
+               
+           #}
+           $fLines = `wc -l < $f`;
+                
+        my ($ch, $chLines);
+           foreach $ch ( @PDBchains ) {
+               my $chF = $ch.".pdb";
+               $chLines = `wc -l < $chF`;
+               next if ($AG eq $ch);
+                   
+            if ( $chLines == $fLines) {
+                push (@tempArr, $ch);
+            }
+           }
+       } 
+    push (@antigenIds, @tempArr);
+##################
+
+  # my @antigenIds =
+   #     checkSingleChainRedundancy ($chainType_HRef, $chainIdChainTpye_HRef, $LOG, $ab);
 
 
+    
     my $chainCount = scalar @PDBchains;
     my $numError = antibodyNumbering ( \@PDBchains, $nsch );
     my $countFailedchains = dealNumError ($LOG, @PDBchains);
@@ -93,15 +146,22 @@ sub processSingleChainAntibody
             $numberingError = 1;
         }
     my $cdrError=0;
- 
+
+    
     if ( $ab eq "L") {
         @singleChainAb = @{$chainType{Light}};
-        @dimers = getDimers(@singleChainAb);
-        mergeLH ($LOG, @dimers);
-        print "LLLLL: @singleChainAb\n";
-        
-        print "DIMERS: @dimers\n";
-        
+                
+        @dimers = getDimers(\@PDBchains, \@antigenIds, $LOG);
+        if ( @dimers) {
+            mergeLH ($LOG, @dimers);
+            print {$LOG} "DIMERS: @dimers\n";
+        }
+        else {
+            @dimers = @singleChainAb;
+            $dimer_flag = 0;
+            
+            print {$LOG} "NOT DIMERS:\n"; 
+        }
     }
     elsif ( $ab eq "H") {
         @singleChainAb = @{$chainType{Heavy}};
@@ -178,17 +238,26 @@ sub processSingleChainAntibody
 
 sub getDimers
 {
-    my (@PDBchains) = @_;
+    my ($PDBchains_ARef, $antigenIds_ARef, $LOG) = @_;
+    my @PDBchains = @{$PDBchains_ARef};
+    my @antigenIds = @{$antigenIds_ARef};
+    
     @PDBchains = sort @PDBchains;
     
     my @pos = ("36", "87", "40");
     my %dimers;
-    my ($d36, $d40, $d87); 
+    my ($d36, $d40, $d87);
+    
     for (my $i=0; $i < (scalar @PDBchains); $i++ )
     {
+        # ignore antigen chains to check for contacts
+        
+        next if (grep {$_ eq $PDBchains[$i]} @antigenIds);        
+                
         for ( my $j=($i+1); $j < (scalar @PDBchains); $j++ )
         {
-            
+            next if (grep {$_ eq $PDBchains[$j]} @antigenIds);
+             
          foreach my $p (@pos)
          {
              # Look for numbered files
@@ -205,11 +274,10 @@ sub getDimers
              # Writing chain l in temporary file
              open (my $OF2, '>', $fTemp) or die "Can not open file: $fTemp\n";
              print {$OF2} @a;
-                  
+
+             
              my @dist = `cat $f1 $fTemp | pdbdist "L"$p "l"$p`;
 
-             #print "TTTT: \n";
-             #print @dist;
              
              my @d = split (/ /, $dist[0]);
              if ($p == 40)
@@ -226,9 +294,9 @@ sub getDimers
                  } 
          }
 
-         print "$PDBchains[$i]$PDBchains[$j]\nD36:$d36:D40:$d40:D87:$d87\n";
+         print {$LOG} "$PDBchains[$i]$PDBchains[$j]\nD36:$d36\nD40:$d40\nD87:$d87\n";
          
-             if ( ( $d36 < 20 ) and ($d87 < 20) and ($d40 < 15) )
+             if ( ( $d36 < 20 ) and ($d87 < 22) and ($d40 <= 40) ) # Made D40 flexible
                  {
                      $dimers{"$PDBchains[$i]$PDBchains[$j]"}=1;
                  }
