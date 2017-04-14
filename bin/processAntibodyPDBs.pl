@@ -112,11 +112,18 @@ open ( my $AGCHAIN, ">AntigenChains.dat") or die "Can not open file $!";
 print {$AGCHAIN} "PDB_ID:Antgen Chains\n";
 open ( my $ABCHAIN, ">AntibodyChains.dat") or die "Can not open file $!";
 print {$ABCHAIN} "PDB_ID:Antibody Chains\n";
+my $rejectFiledir = $config::rejectFileDir;
+
 
 foreach my $pdb ( @PDBCodes )
 {
     chomp $pdb;
     print "\nWorking on $pdb\n";
+# To reject the PDB files that are listed in Reject list
+    my $nPdb = `grep $pdb $rejectFiledir/Reject.list`;
+    if ( $nPdb) {
+        next;
+    }
     my $logFile =  "antibody.log";
     
     $dir = dirOperations ($processDir, $pdb);
@@ -213,7 +220,7 @@ foreach my $pdb ( @PDBCodes )
     
 
 chdir '..';
-#last;
+ #last;
 
 }
 

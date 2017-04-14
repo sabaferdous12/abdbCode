@@ -21,9 +21,9 @@ $idabchain ='/home/bsm/martin/bin/idabchain';
 $pdbsplitchains = "/home/bsm/martin/bin/pdbsplitchains"; 
 $renumpdb = '/home/bsm/martin/bin/renumpdb';
 $getpdb = '/home/bsm/martin/bin/getpdb';
-
+$pdbsymm = "/home/bsm/martin/bin/pdbsymm";
+$pdbcount = "~/bin/pdbcount";
 ###
 $idabFiledir= "/acrm/bsmhome/ucbterd/git/abdbCode/lib/fixed/";
-
+$rejectFileDir= "/acrm/bsmhome/ucbterd/git/abdbCode";
 1;
-

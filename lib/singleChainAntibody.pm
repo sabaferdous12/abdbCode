@@ -112,10 +112,6 @@ sub processSingleChainAntibody
     my ($fLines, $AG, @tempArr);
        foreach $AG( @antigenIds) {
            my $f = $AG.".pdb";
-          # if ( ($f eq "%h.pdb") or ($f eq "%l.pdb") ){
-           #               print "SEEE: $AG\n";
-               
-           #}
            $fLines = `wc -l < $f`;
                 
         my ($ch, $chLines);
