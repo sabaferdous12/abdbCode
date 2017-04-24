@@ -2,6 +2,10 @@ use strict;
 use warnings;
 use Data::Dumper;
 use File::Copy;
+use Cwd qw(abs_path);
+use FindBin;
+use lib abs_path("$FindBin::Bin/../lib");
+
 use List::Util qw( min max );
 use List::MoreUtils qw(uniq);
 use antibodyProcessing qw (getResolInfo

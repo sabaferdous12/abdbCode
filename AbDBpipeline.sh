@@ -167,17 +167,17 @@ mv *.list *.dat ./$scheme"_logs"
 
 #***** Temporary Comment Kabat and Chothia Schemes ******#
 # ****************************
-#scheme="Kabat"
-#schemeFlag="-k"
-#runProg $scheme $schemeFlag $1
-#mkdir -p  $scheme"_logs"
-#mv *.list *.dat ./$scheme"_logs"
+scheme="Kabat"
+schemeFlag="-k"
+runProg $scheme $schemeFlag $1
+mkdir -p  $scheme"_logs"
+mv *.list *.dat ./$scheme"_logs"
 
-#scheme="Chothia"
-#schemeFlag="-c"
-#runProg $scheme $schemeFlag $1
-#mkdir -p $scheme"_logs"
-#mv *.list *.dat ./$scheme"_logs"
+scheme="Chothia"
+schemeFlag="-c"
+runProg $scheme $schemeFlag $1
+mkdir -p $scheme"_logs"
+mv *.list *.dat ./$scheme"_logs"
 # ******************************
 
 mv Redundant_files Data

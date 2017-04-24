@@ -638,7 +638,7 @@ sub processHapten
     foreach  my $antibodyPair (@antibodyPairs)
     {
         
-        mergeLH($LOG, @antibodyPairs);
+        #mergeLH($LOG, @antibodyPairs);
 
         @hapMole = ();
         @hapInter = ();
@@ -1281,13 +1281,15 @@ sub mergeLH
         my $countFailedPairs=0;
         foreach my $antibodyPair (@antibodyPairs)
         {
-            
+            chomp $antibodyPair;
+                     
         my ($l, $h) = split ("", $antibodyPair);
+
+            
+       #     if ( ($l) and ($h)) {
+        #        print "ASSSEM: $l and $h\n";
+                $numberedAntibody = $antibodyPair."_num.pdb";
                 
-        if ( ($l) and ($h)) {
-                    $numberedAntibody = $antibodyPair."_num.pdb";
-
-
                     `cat $l"_num.pdb" $h"_num.pdb" >$numberedAntibody`;
 
                     print {$LOG} "Each of the antibody in the PDB has been assembled with".
@@ -1307,7 +1309,7 @@ sub mergeLH
                             $countFailedPairs++;
                         }
                     }
-                }
+         #       }
     }
         
         return $countFailedPairs++;
