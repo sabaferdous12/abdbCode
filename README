@@ -1,6 +1,10 @@
 1. To run AbDB pipeline
 
-~/git/abdbCode/AbDBpipeline.sh SACsList.txt
+i) Obtain antibodies.xml from SACs
+perl ~/git/abdbCode/bin/getSACsPDBList.pl antibodies.xml >SACS_21April2017
+
+ii) Run script for pipeline
+~/git/abdbCode/AbDBpipeline.sh SACS_21April2017
 
 You need to have 2 files in current directory (From where you are calling the script)
 
