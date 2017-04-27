@@ -597,6 +597,8 @@ sub aa3to1
 
 sub hasHapten
 {
+    
+    
     my ($pdbPath, $antibodyPair_ARef) = @_;
     my $hashapten = $config::hashapten;
     
@@ -606,10 +608,10 @@ sub hasHapten
     
     for my $antibody (@antibodyPairs  )
     {
-        
+    
         my ($L, $H) = split ("", $antibody);
             @haptens = `$hashapten -l $L, -h $H $pdbPath`;
-                
+
         push (@allHaptens , @haptens );
     }
 
@@ -634,6 +636,8 @@ sub processHapten
     
     my @antibodyPairs = @ {$antibodyPair_ARef};
     my (@hapMole, @hapInter);
+
+#    print "TEST: Hapten: \n";
     
     foreach  my $antibodyPair (@antibodyPairs)
     {
@@ -680,11 +684,11 @@ sub processHapten
         my $outputFile_temp = $antibodyPair."_hap_temp.pdb";
         my $outputFile = $antibodyPair."_hap.pdb";
         open (my $OUT, '>', $outputFile);
-                
+                    
         # Writing all HETATM records to antibody file
-        if (-z !$antibodyFile) {
+        if (-s $antibodyFile) {
             `pdbaddhet $pdbPath $antibodyFile $outputFile_temp`;
-           }     
+        }     
         # Parsing HETATMs for only identified haptens and discarding the rest
         open (my $IN, '<', $outputFile_temp);
         my @HET = <$IN>;
