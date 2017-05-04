@@ -91,8 +91,8 @@ sub processAntibody
         $numberingError = 1;
     }
 
-    my $hapten = hasHapten ($pdbPath, \@antibodyPairs);
-    
+    my $hapten = hasHapten ($pdbPath, \@antibodyPairs, $LOG);
+        
     my $fileType;
     my %fileType;
     my$cdrError=0;
@@ -101,6 +101,7 @@ sub processAntibody
     # Checks for haptens and move them to non-Protein data
     if ( ( $hapten) and (!@antigens) )
     {
+                
 #        $fileType = "hap";
         %fileType = processHapten($pdbPath, \@antibodyPairs, $ab, $LOG);
         makeFreeAntibodyComplex($pdbId, $pdbPath, \@antibodyPairs, $count,
@@ -154,6 +155,9 @@ sub makeFreeAntibodyComplex
     my @antibodyPairs = @ {$antibodyPair_ARef};
         
     my ($lookForFile, $newFile);
+
+#    print Dumper (\%fileTypeH);
+    
     
     foreach my $antibodyPair (@antibodyPairs)
     {
@@ -166,8 +170,14 @@ sub makeFreeAntibodyComplex
             
             $fileType = "num";
         }
+        if ( !$fileType) {
+            $fileType = "num";
+        }
+        #print "TEST:$antibodyPair: $fileType\n";
+        
         $lookForFile = $antibodyPair."_".$fileType.".pdb";
 
+        
         # Get chain labels for chains in given file
         my @chainLabel = getChainLabels($lookForFile);
                

@@ -71,22 +71,40 @@ sub processSingleChainAntibody
 
     # Compare the number of chains. If symmetry PDB has more chains than original then
     # all the chains from that PDB will be split
-    my $dimer_flag = 0;
+   
     my @PDBchains;
-    
-    if ( ( $chainsSym >= $chainsPdb ) and ($chainsPdb != 1) ){
-        $pdbPath = $symPdb;
-        print {$LOG} "Symmetry PDB file will be used to split the chains\n";
-        $dimer_flag = 1;
+    my $dimer_flag = 0;
+
+    # Do symmtery just for L chain 
+    if ( $ab eq "L") {
+
+        if ( ( $chainsSym >= $chainsPdb ) and ($chainsPdb != 1) ){
+            $pdbPath = $symPdb;
+            print {$LOG} "Symmetry PDB file will be used to split the chains\n";
+            $dimer_flag = 1;
+        }
+        
+    }
+    elsif ( $ab eq "H") {
+        $dimer_flag = 0;
     }
     
          @PDBchains = splitPdb2Chains($pdbPath);
         print {$LOG} "The $pdbId PDB has been splitted in to different files".
             " based on number of chains\n";
-
-     my @antigenIds =
-         checkSingleChainRedundancy ($chainType_HRef, $chainIdChainTpye_HRef, $LOG, $ab);
     
+    my $chainCount = scalar @PDBchains;
+    my $numError = antibodyNumbering ( \@PDBchains, $nsch );
+    my $countFailedchains = dealNumError ($LOG, @PDBchains);
+    
+    if ( ($numError) and ($chainCount == $countFailedchains))
+        {
+            $numberingError = 1;
+        }
+    my $cdrError=0;
+    my @antigenIds =
+         checkSingleChainRedundancy ($chainType_HRef, $chainIdChainTpye_HRef, $LOG, $ab);
+       
 ##############    
     # If a single light chain is not redundant then it should not be treated as antigen
     # so excluded that from antigen array
@@ -109,39 +127,33 @@ sub processSingleChainAntibody
     # check for Antigen Symmetry file
     # For antigen chains, it checks for similar files on basis of number
     # of lines and then updates the antigenIds array
-    my ($fLines, $AG, @tempArr);
-       foreach $AG( @antigenIds) {
-           my $f = $AG.".pdb";
-           $fLines = `wc -l < $f`;
+
+    if ( $dimer_flag) {
+
+        my ($fLines, $AG, @tempArr);
+        foreach $AG( @antigenIds) {
+            my $f = $AG.".pdb";
+            $fLines = `wc -l < $f`;
+            
+            my ($ch, $chLines);
+            foreach $ch ( @PDBchains ) {
+                my $chF = $ch.".pdb";
+                $chLines = `wc -l < $chF`;
+                next if ($AG eq $ch);
                 
-        my ($ch, $chLines);
-           foreach $ch ( @PDBchains ) {
-               my $chF = $ch.".pdb";
-               $chLines = `wc -l < $chF`;
-               next if ($AG eq $ch);
-                   
-            if ( $chLines == $fLines) {
-                push (@tempArr, $ch);
+                if ( $chLines == $fLines) {
+                    push (@tempArr, $ch);
+                }
             }
-           }
-       } 
-    push (@antigenIds, @tempArr);
+        } 
+        push (@antigenIds, @tempArr);
+    }
+    
 ##################
 
   # my @antigenIds =
    #     checkSingleChainRedundancy ($chainType_HRef, $chainIdChainTpye_HRef, $LOG, $ab);
 
-
-    
-    my $chainCount = scalar @PDBchains;
-    my $numError = antibodyNumbering ( \@PDBchains, $nsch );
-    my $countFailedchains = dealNumError ($LOG, @PDBchains);
-    
-    if ( ($numError) and ($chainCount == $countFailedchains))
-        {
-            $numberingError = 1;
-        }
-    my $cdrError=0;
 
     
     if ( $ab eq "L") {
@@ -155,7 +167,6 @@ sub processSingleChainAntibody
         else {
             @dimers = @singleChainAb;
             $dimer_flag = 0;
-            
             print {$LOG} "NOT DIMERS:\n"; 
         }
     }
@@ -168,8 +179,8 @@ sub processSingleChainAntibody
     my $hapten;
     
     if ( $dimer_flag ) {
-        $hapten = hasHapten ($pdbPath, \@dimers);
-        %fileTypeH = processHapten($pdbPath, \@dimers, $ab, $LOG);
+        $hapten = hasHapten ($pdbPath, \@dimers, $LOG);
+        %fileTypeH = processHapten($pdbPath, \@dimers, $ab, $LOG, $dimer_flag );
         
     }
     # Check for haptens bound with CDRs
@@ -187,9 +198,6 @@ sub processSingleChainAntibody
     if ( ($hapten) and (!@antigenIds) )
     {
 
- #       %fileTypeH = processHapten($pdbPath, \@singleChainAb, $ab, $LOG);
-        
-        
         makeFreeAntibodyComplex ($pdbId, $pdbPath, \@singleChainAb, $count, $fileType,
                                  $dir, $chainIdChainTpye_HRef, $numbering,
                                  $LOG, $destNonPro, $destFreeAb, $ab, %fileTypeH);
@@ -200,7 +208,7 @@ sub processSingleChainAntibody
     # processAntibodyAntigen subroutine)
     elsif ( (@antigenIds) and (!$hapten) )
     {
-
+                
         $fileType = "num";
         $cdrError= processAntibodyAntigen($pdbId, $pdbPath, $ab, \@antigenIds,
                                \@singleChainAb, $fileType, $dir, $masterDir,
@@ -211,10 +219,7 @@ sub processSingleChainAntibody
     # Antibody bound with antigen and haptens - Moved to protein antigen data
     elsif ( (@antigenIds) and ($hapten) )
     {
-
-                
-        #        $fileType = "hap";
-#        %fileTypeH =  processHapten($pdbPath, \@singleChainAb, $ab, $LOG);
+            
         $cdrError = processAntibodyAntigen($pdbId, $pdbPath, $ab, \@antigenIds,
                                \@singleChainAb, $fileType, $dir, $masterDir,
                                $LOG, $chainIdChainTpye_HRef, $destPro,
