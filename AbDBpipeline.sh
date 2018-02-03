@@ -192,6 +192,12 @@ filearray=( * ) # Reading directory files into an array
  done
 cd ..
 
+# Run Chain Mapping script on the ALL_Martin directory
+cd ALL_Martin
+perl $bin/chainMapping.pl >AbDb_chainMapping.dat
+mv AbDb_chainMapping.dat ../
+cd ..
+
 # Stats for processed data
 perl $bin/getprocessedDataStats.pl
 mv *.tt ../
