@@ -34,6 +34,9 @@ cat << __EOF__
 <p><a href="http://www.bioinf.org.uk/abs/abdb/Data/Kabat_Failed.list">List of antibodies that failed the numbering</a></p>
 <p><a href="http://www.bioinf.org.uk/abs/abdb/Data/Martin_logs/multi-chain.list">List of antibodies bound to multiple antigens</a></p>
 <p><a href="http://www.bioinf.org.uk/abs/abdb/Data/Martin_logs/scFV.list">List of single chain antibodies (scFVs)</a></p>
+<p><a href="http://www.bioinf.org.uk/abs/abdb/Data/AbDb_chainMapping.dat">List of chain mapping information for all structures in AbDb </a></p>
+<br></br>
+<p><a href="http://www.bioinf.org.uk/abs/abdb/ws.cgi">Help to access AbDb web services can be found here !!!</a></p>
 
 </table>
 </div>
